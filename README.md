@@ -6,7 +6,7 @@ PGA / LGA CPUs (386 to Athlon 64 / LGA 775), QFP and PLCC chips, and DIP chips i
 **Use it online:** https://lopo.github.io/ChipTrayGenerator/ — or download `index.html` and open it locally.
 No build, no server; three.js is loaded from a CDN for the preview.
 
-![Chip Tray Generator](docs/screenshot.png)
+[![Chip Tray Generator](docs/screenshot.png)](docs/screenshot-full.png)
 
 ## What it does
 
