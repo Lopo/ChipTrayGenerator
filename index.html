@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro CPU Tray Generator</title>
+<!-- three.js r128 UMD build + OrbitControls + STLExporter (same release, examples/js) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+<style>
+	* { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+	body { background: #0b0c10; color: #f8fafc; margin: 0; padding: 24px 16px; display: flex; justify-content: center; }
+	.wrapper { max-width: 1180px; width: 100%; background: #14151a; border-radius: 16px; border: 1px solid #22252c;
+		padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.8); display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; }
+	@media (max-width: 900px) { .wrapper { grid-template-columns: 1fr; } }
+	h1 { grid-column: 1 / -1; margin: 0; font-size: 24px; color: #f97316; text-align: center; font-weight: 700; letter-spacing: -.02em; }
+	p.subtitle { grid-column: 1 / -1; margin: 0 0 8px; color: #6b7280; text-align: center; font-size: 13px; }
+	.form-panel { display: flex; flex-direction: column; gap: 14px; }
+	.field { display: flex; flex-direction: column; gap: 6px; }
+	.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+	label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; display: flex; justify-content: space-between; }
+	label span.val { color: #f97316; text-transform: none; letter-spacing: 0; }
+	select, input[type=text], input[type=number] { width: 100%; padding: 10px 12px; background: #07080a; border: 1px solid #2e333d;
+		border-radius: 8px; color: #f8fafc; font-size: 14px; }
+	select:focus, input:focus { border-color: #f97316; outline: none; }
+	input[type=range] { width: 100%; accent-color: #f97316; }
+	.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #d1d5db; }
+	.check input { accent-color: #f97316; width: 16px; height: 16px; flex: none; }
+	.check label { text-transform: none; letter-spacing: 0; font-size: 13px; color: #d1d5db; font-weight: 500; }
+	.spec-box { background: #07080a; border-left: 4px solid #f97316; padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 13px; line-height: 1.55; color: #9ca3af; }
+	.spec-box strong { color: #f97316; }
+	.spec-box table { width: 100%; border-collapse: collapse; }
+	.spec-box td { padding: 3px 0; border-bottom: 1px solid #1f2329; vertical-align: top; }
+	.spec-box td:last-child { text-align: right; color: #e5e7eb; }
+	.warn { color: #fbbf24; font-size: 12px; margin-top: 6px; }
+	.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.btn { background: #f97316; color: #fff; border: none; padding: 13px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; box-shadow: 0 4px 12px rgba(249,115,22,.3); }
+	.btn:hover { background: #ea580c; }
+	.btn.secondary { background: #1f2937; box-shadow: none; }
+	.btn.secondary:hover { background: #374151; }
+	.preview-panel { background: #07080a; border-radius: 12px; border: 1px solid #22252c; display: flex; flex-direction: column; min-height: 520px; position: relative; overflow: hidden; }
+	.view-label { position: absolute; bottom: 100px; left: 14px; font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; z-index: 10; pointer-events: none; }
+	.view-btns { position: absolute; top: 8px; right: 10px; z-index: 10; display: flex; gap: 6px; }
+	.view-btns button { background: #1f2937; color: #e5e7eb; border: 1px solid #2e333d; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+	.view-btns button.active { background: #f97316; border-color: #f97316; color: #fff; }
+	#canvas3d { width: 100%; height: 100%; min-height: 520px; outline: none; cursor: grab; display: block; }
+	#canvas3d:active { cursor: grabbing; }
+	.stats { position: absolute; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(3, 1fr); background: rgba(20,21,26,.92); border-top: 1px solid #22252c; z-index: 10; }
+	.stats div { padding: 10px; text-align: center; }
+	.stats .k { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+	.stats .v { font-size: 15px; color: #f8fafc; font-weight: 600; margin-top: 2px; }
+	#err { grid-column: 1 / -1; color: #fca5a5; background: #2a1215; border: 1px solid #7f1d1d; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
+	footer { grid-column: 1 / -1; color: #4b5563; font-size: 11px; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+	<h1>💾 Retro CPU Tray Generator</h1>
+	<p class="subtitle">Stackable 3D-printable trays for PGA / LGA processors, QFP / PLCC chips and DIP chips · WebGL preview · OpenSCAD and STL export</p>
+	<div id="err"></div>
+
+	<div class="form-panel">
+		<div class="field">
+			<label for="sock">1. Package / socket</label>
+			<select id="sock"></select>
+		</div>
+		<div class="row" data-fam="custom">
+			<div class="field"><label>Package width <span class="val">mm</span></label><input type="number" id="cw" value="40" step="0.1" min="5" max="120"></div>
+			<div class="field"><label>Package length <span class="val">mm</span></label><input type="number" id="ch" value="40" step="0.1" min="5" max="120"></div>
+		</div>
+		<div class="row" data-fam="dip">
+			<div class="field"><label for="perRow">Chips per channel <span class="val" id="perRowV">4</span></label><input type="range" id="perRow" min="1" max="12" value="4"></div>
+			<div class="field"><label for="chipGap">Gap between chips <span class="val" id="chipGapV">1.5 mm</span></label><input type="range" id="chipGap" min="0.5" max="4" step="0.25" value="1.5"></div>
+		</div>
+		<div class="row">
+			<div class="field"><label for="rows">2. Rows <span class="val" id="rowsV">2</span></label><input type="range" id="rows" min="1" max="12" value="2"></div>
+			<div class="field"><label for="cols">Columns <span class="val" id="colsV">3</span></label><input type="range" id="cols" min="1" max="12" value="3"></div>
+		</div>
+		<div class="row">
+			<div class="check"><input type="checkbox" id="fixedOn"><label for="fixedOn">Fixed outer format (one size for every package, so trays stack across families)</label></div>
+			<div class="row" style="gap:8px">
+				<div class="field"><label>Width <span class="val">mm</span></label><input type="number" id="fixedW" value="170" step="1" min="40" max="400"></div>
+				<div class="field"><label>Length <span class="val">mm</span></label><input type="number" id="fixedH" value="120" step="1" min="40" max="400"></div>
+			</div>
+		</div>
+		<div class="row" id="fixedRow" style="display:none">
+			<button class="btn secondary" type="button" onclick="fitMax()" style="padding:9px">⤢ Max pockets that fit</button>
+			<div class="spec-box" style="padding:8px 12px;font-size:12px" id="fixedInfo">–</div>
+		</div>
+		<div class="field">
+			<label for="tol">3. Print fit tolerance (pocket clearance) <span class="val" id="tolV">+0.50 mm</span></label>
+			<input type="range" id="tol" min="0" max="2" step="0.05" value="0.5">
+		</div>
+		<div class="row">
+			<div class="field"><label for="wall">Wall between pockets <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="8" step="0.5" value="3"></div>
+			<div class="field"><label for="floor">Floor <span class="val" id="floorV">2.5 mm</span></label><input type="range" id="floor" min="1" max="6" step="0.5" value="2.5"></div>
+		</div>
+		<div class="row">
+			<div class="field"><label for="depth">Pocket depth <span class="val" id="depthV">8.5 mm</span></label><input type="range" id="depth" min="2" max="16" step="0.5" value="8.5"></div>
+			<div class="field"><label for="ped">Support height <span class="val" id="pedV">4.0 mm</span></label><input type="range" id="ped" min="0" max="8" step="0.5" value="4"></div>
+		</div>
+		<div class="row" data-fam="pga">
+			<div class="check"><input type="checkbox" id="pedOn" checked><label for="pedOn">Central pedestal (package rests on its pin-free centre)</label></div>
+			<div class="field"><label for="pedSize">Pedestal side <span class="val" id="pedSizeV">16 mm</span></label><input type="range" id="pedSize" min="6" max="40" step="1" value="16"></div>
+		</div>
+		<div class="row" data-fam="pga">
+			<div class="field"><label for="ledge">Edge ledge under the substrate rim <span class="val" id="ledgeV">0.0 mm</span></label><input type="range" id="ledge" min="0" max="3" step="0.25" value="0"></div>
+			<div></div>
+		</div>
+		<div class="row" data-fam="qfp">
+			<div class="field"><label for="inset">Pad inset from the body edge <span class="val" id="insetV">0.5 mm</span></label><input type="range" id="inset" min="0" max="4" step="0.25" value="0.5"></div>
+			<div></div>
+		</div>
+		<div class="row" data-fam="pga qfp">
+			<div class="check"><input type="checkbox" id="hole" checked><label for="hole">Push-out hole through the support and floor</label></div>
+			<div class="field"><label for="holeD">Hole diameter <span class="val" id="holeDV">10 mm</span></label><input type="range" id="holeD" min="3" max="30" step="1" value="10"></div>
+		</div>
+		<div class="row" data-fam="dip">
+			<div class="field"><label for="railW">Centre rail width <span class="val" id="railWV">12.6 mm</span></label><input type="range" id="railW" min="2" max="24" step="0.2" value="12.6"></div>
+			<div></div>
+		</div>
+		<div class="row">
+			<div class="field"><label for="rim">Stacking rim height <span class="val" id="rimV">2.0 mm</span></label><input type="range" id="rim" min="0" max="5" step="0.5" value="2"></div>
+			<div class="check"><input type="checkbox" id="spin"><label for="spin">Auto-rotate preview</label></div>
+		</div>
+		<div class="field">
+			<label for="labelInput">4. Label (engraved into the front wall, OpenSCAD export only)</label>
+			<input type="text" id="labelInput" value="AMD K6-III+" maxlength="40" placeholder="e.g. INTEL DX2-66, AM386DX-40, 8042 KBC, 82C822 ...">
+		</div>
+
+		<div class="spec-box">
+			<strong>📐 Parameters</strong>
+			<table>
+				<tr><td>Package (nominal)</td><td id="tPkg">–</td></tr>
+				<tr><td>Pocket incl. tolerance</td><td id="tPocket">–</td></tr>
+				<tr><td>Tray outer size</td><td id="tOuter">–</td></tr>
+				<tr><td>Total height (with rim)</td><td id="tH">–</td></tr>
+				<tr><td id="tSupK">Support</td><td id="tSup">–</td></tr>
+				<tr><td>Dimension source</td><td id="tSrc">–</td></tr>
+			</table>
+			<div class="warn" id="pedWarn" style="display:none"></div>
+		</div>
+
+		<div class="btns">
+			<button class="btn" onclick="exportScad()">💾 OpenSCAD (.scad)</button>
+			<button class="btn secondary" onclick="exportStl()">⬇ STL from preview</button>
+		</div>
+	</div>
+
+	<div class="preview-panel">
+		<div class="view-label">WebGL · left drag = rotate · wheel = zoom · right drag = pan · label only in SCAD</div>
+		<div class="view-btns">
+			<button id="vIso" class="active" onclick="setView('iso')">Isometric</button>
+			<button id="vTop" onclick="setView('top')">Top</button>
+			<button id="vBottom" onclick="setView('bottom')">Bottom</button>
+		</div>
+		<canvas id="canvas3d"></canvas>
+		<div class="stats">
+			<div><div class="k">Tray</div><div class="v" id="sSize">–</div></div>
+			<div><div class="k">Pockets</div><div class="v" id="sCount">–</div></div>
+			<div><div class="k">Filament (solid volume)</div><div class="v" id="sMass">–</div></div>
+		</div>
+	</div>
+
+	<footer>
+		Trays nest by a top rim and a matching bottom recess; heights may differ between trays, only the outer format must match.
+		PGA packages rest on a central pedestal inside the pin-free centre, or on an edge ledge / hollow pedestal where the underside carries capacitors.
+		QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube.
+		Dimensions come from the datasheets and JEDEC outlines listed per package.
+	</footer>
+</div>
+
+<script>
+// ===========================================================================
+// Package database. Every entry belongs to a family (fam) that decides how the
+// chip is supported inside its pocket. Common fields: id, fam, name, src.
+//  pga: w/h body; ped = max safe side of a solid pedestal (inside the innermost pin row); edge = pin-free substrate
+//       margin outside the pin field (limits the ledge); cap = bottom-side component zone (0 clean, 99 whole underside).
+//  qfp: span/spanH = outer lead-tip dimensions (pocket), body/bodyH = plastic body, inset = default pad inset
+//       from the body edge (QFP gull-wing feet are outside the body, PLCC J-leads tuck ~1 mm under it), thick = body height.
+//  dip: span = max pin-tip width (E), len = max body length, rowSp = row spacing, rail = default centre rail width.
+// ===========================================================================
+var PACKAGES = [
+	{ group: 'PGA / LGA processors' },
+	{ id: 'pga68',  fam: 'pga', name: 'PGA68 — 287 / 387DX / 387SX-PGA (27.9 mm)',                w: 27.9, h: 27.9, ped: 13, edge: 0.6, ledge: 0,    cap: 0,  pins: 68,  src: '11×11 grid @ 2.54 mm, 1.10" body (derived)' },
+	{ id: 'pga132', fam: 'pga', name: 'PGA132 — 386DX / Am386DX / Cx486DLC (34.5 mm)',              w: 34.5, h: 34.5, ped: 16, edge: 0.7, ledge: 0,    cap: 0,  pins: 132, src: 'Intel 231630: 14×14 @ 2.54 mm, 3 rows, 1.36"' },
+	{ id: 'pga168', fam: 'pga', name: 'PGA168/169 — 486, Socket 1–3, 5x86 (44.5 mm)',               w: 44.5, h: 44.5, ped: 22, edge: 1.9, ledge: 0,    cap: 0,  pins: 168, src: 'Intel packaging databook: 17×17 @ 2.54 mm, 3 rows, 1.75" (44.19–45.21)' },
+	{ id: 's7',     fam: 'pga', name: 'SPGA296/321 — Pentium, MMX, K5, K6, Socket 5/7 (49.5 mm)',   w: 49.5, h: 49.5, ped: 26, edge: 1.9, ledge: 0,    cap: 0,  pins: 321, src: 'Intel 241997 Tab.19 1.95"; AMD 21850 Tab.73 A 49.28–49.78, pins 3.05–3.30; pin-free centre ≥ 23×25 positions ≈ 29 mm (Socket 7 pin-side view, K6-2 Fig.113)' },
+	{ id: 's370',   fam: 'pga', name: 'PPGA / FC-PGA 370 — Celeron, Pentium III, Cyrix III (49.5 mm)', w: 49.5, h: 49.5, ped: 21, edge: 1.9, ledge: 1.5, cap: 17.8, pins: 370, src: 'Intel 245264 Tab.35: D 49.43–49.63, D1 45.7, pins 3.05–3.30; bottom-side capacitors inside G1/G2 = 17.78 mm; pin-free centre ≈ 22 mm (Fig.31)' },
+	{ id: 'sA',     fam: 'pga', name: 'Socket A 462 — Athlon, Duron, Athlon XP (49.5 mm)',          w: 49.5, h: 49.5, ped: 26, edge: 1.9, ledge: 0,    cap: 0,  pins: 462, src: 'AMD 25175 Tab.21 / Fig.14, 17: D 49.27–49.78, D1 45.72, pins 3.05–3.31; clean underside, pin-free centre 21×21 positions ≈ 27 mm' },
+	{ id: 's423',   fam: 'pga', name: 'Socket 423 — Pentium 4 Willamette (53.3 mm)',               w: 53.3, h: 53.3, ped: 0,  edge: 1.9, ledge: 1.5, cap: 99, pins: 423, src: '2.1" × 2.1" (Intel PGA423); underside carries capacitors → edge ledge only' },
+	{ id: 's478',   fam: 'pga', name: 'mPGA478 / 479 / Socket M / P — Pentium 4, Pentium M, Core 2 mobile (35 mm)', w: 35, h: 35, ped: 0, edge: 1.6, ledge: 1.25, cap: 99, pins: 478, src: '35 × 35 mm (Intel mPGA478 design guide); underside carries capacitors → edge ledge only' },
+	{ id: 's604',   fam: 'pga', name: 'mPGA604 — Xeon Nocona/Irwindale (42.5 mm)',                 w: 42.5, h: 42.5, ped: 0,  edge: 1.0, ledge: 0.75, cap: 99, pins: 604, src: '42.5 × 42.5 mm (Wikipedia Socket 604); early Foster/Prestonia Xeons are 53.3 mm — use custom size; edge margin approx.' },
+	{ id: 's939',   fam: 'pga', name: 'Socket 754 / 939 / 940 — Athlon 64, Opteron (40 mm)',       w: 40,   h: 40,   ped: 0,  edge: 0.95, ledge: 0.75, cap: 99, pins: 939, src: '40 × 40 mm (AMD); 31×31 @ 1.27 mm pin field ≈ 38.1 mm leaves only ~1 mm rim; capacitors on the underside → thin ledge, keep tolerance ≤ 0.3 mm' },
+	{ id: 'am2',    fam: 'pga', name: 'Socket AM2 / AM2+ / AM3 / AM3+ / FM1 / FM2 (40 mm)',        w: 40,   h: 40,   ped: 0,  edge: 0.95, ledge: 0.75, cap: 99, pins: 940, src: '40 × 40 mm (AMD); same pin field as Socket 939 → thin ledge, keep tolerance ≤ 0.3 mm' },
+	{ id: 'lga775', fam: 'pga', name: 'LGA 775 / 1156 / 1155 / 1150 / 1151 (37.5 mm)',             w: 37.5, h: 37.5, ped: 0,  edge: 2.0, ledge: 1.5, cap: 99, pins: 775, src: '37.5 × 37.5 mm (Intel); LGA lands + capacitors on the underside → edge ledge only, never a pedestal' },
+	{ id: 'custom', fam: 'pga', name: 'Custom PGA size…',                                          w: 40,   h: 40,   ped: 16, edge: 1.5, ledge: 0,    cap: 0,  pins: 0,   src: 'entered manually' },
+	{ group: 'QFP / PLCC chips (body rests on a pad, leads float)' },
+	{ id: 'tqfp100',  fam: 'qfp', name: 'TQFP-100 0.5 mm — 14×14 body (CPLDs, µC)',               span: 16.0, spanH: 16.0, body: 14.0, bodyH: 14.0, inset: 0.5, thick: 1.2, src: 'JEDEC MS-026 BDE: body 14×14, lead span 16×16' },
+	{ id: 'tqfp144',  fam: 'qfp', name: 'TQFP-144 0.5 mm — 20×20 body (ATF1508, FPGAs)',          span: 22.0, spanH: 22.0, body: 20.0, bodyH: 20.0, inset: 0.5, thick: 1.2, src: 'JEDEC MS-026 BFB: body 20×20, lead span 22×22' },
+	{ id: 'pqfp100',  fam: 'qfp', name: 'PQFP-100 0.65 mm — 14×20 body (82C602, 82C611A, Super I/O)', span: 17.2, spanH: 23.2, body: 14.0, bodyH: 20.0, inset: 0.5, thick: 3.0, src: 'JEDEC MS-022 GC-1: body 14×20, lead span 17.2×23.2' },
+	{ id: 'pqfp128',  fam: 'qfp', name: 'PQFP-128 0.5 mm — 14×20 body (KBC, chipset I/O)',         span: 17.2, spanH: 23.2, body: 14.0, bodyH: 20.0, inset: 0.5, thick: 3.0, src: 'JEDEC MS-022 GD: body 14×20, lead span 17.2×23.2' },
+	{ id: 'bqfp132',  fam: 'qfp', name: 'BQFP-132 bumpered — 386SX, 486SLC/DLC (27.9 mm)',         span: 27.9, spanH: 27.9, body: 24.1, bodyH: 24.1, inset: 0.5, thick: 3.6, src: 'JEDEC MO-069 (bumpered 132): body 24.1, bumper span 27.94' },
+	{ id: 'pqfp160',  fam: 'qfp', name: 'PQFP-160 0.65 mm — 28×28 body (video, chipset)',          span: 31.2, spanH: 31.2, body: 28.0, bodyH: 28.0, inset: 0.5, thick: 3.6, src: 'JEDEC MS-022 GE-1: body 28×28, lead span 31.2' },
+	{ id: 'pqfp208',  fam: 'qfp', name: 'PQFP-208 0.5 mm — 28×28 body (82C822, S3 Trio64, GD5434)', span: 30.6, spanH: 30.6, body: 28.0, bodyH: 28.0, inset: 0.5, thick: 3.6, src: 'JEDEC MS-022 GE: body 28×28, lead span 30.6' },
+	{ id: 'pqfp240',  fam: 'qfp', name: 'PQFP-240 0.5 mm — 32×32 body (chipset north bridges)',    span: 34.6, spanH: 34.6, body: 32.0, bodyH: 32.0, inset: 0.5, thick: 3.6, src: 'JEDEC MS-022 GF: body 32×32, lead span 34.6' },
+	{ id: 'plcc20',   fam: 'qfp', name: 'PLCC-20 (GAL16V8, 8-bit latches)',                        span: 10.0, spanH: 10.0, body: 9.0,  bodyH: 9.0,  inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AA: D 0.395", body 0.356"' },
+	{ id: 'plcc28',   fam: 'qfp', name: 'PLCC-28 (GAL22V10, 28C64, 27C512)',                       span: 12.6, spanH: 12.6, body: 11.5, bodyH: 11.5, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AB: D 0.495", body 0.450"' },
+	{ id: 'plcc32',   fam: 'qfp', name: 'PLCC-32 (27C010, 29F010 flash BIOS)',                     span: 12.6, spanH: 14.0, body: 11.5, bodyH: 13.9, inset: 1.5, thick: 4.4, src: 'JEDEC MS-016 AE: D 0.495" × E 0.595", body 0.450" × 0.550"' },
+	{ id: 'plcc44',   fam: 'qfp', name: 'PLCC-44 (ATF1504, 8051, 16V8 sets)',                      span: 17.7, spanH: 17.7, body: 16.6, bodyH: 16.6, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AC: D 0.695", body 0.650"' },
+	{ id: 'plcc52',   fam: 'qfp', name: 'PLCC-52 (UARTs, KBC)',                                    span: 20.2, spanH: 20.2, body: 19.1, bodyH: 19.1, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AD: D 0.795", body 0.750"' },
+	{ id: 'plcc68',   fam: 'qfp', name: 'PLCC-68 (286, V20/V30 PLCC, 80186, ISA VGA chips)',       span: 25.3, spanH: 25.3, body: 24.2, bodyH: 24.2, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AE: D 0.995", body 0.950"' },
+	{ id: 'plcc84',   fam: 'qfp', name: 'PLCC-84 (ATF1508, TLC34075 RAMDAC, chipset)',             span: 30.4, spanH: 30.4, body: 29.3, bodyH: 29.3, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AF: D 1.195", body 1.150"' },
+	{ group: 'DIP chips (channels, chips end to end)' },
+	{ id: 'dip8',   fam: 'dip', name: 'DIP-8 0.3" (op-amps, 555, small EEPROM)',      span: 8.3,  len: 10.2, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.400", E max 0.325"' },
+	{ id: 'dip14',  fam: 'dip', name: 'DIP-14 0.3" (74xx logic)',                    span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
+	{ id: 'dip16',  fam: 'dip', name: 'DIP-16 0.3" (74xx, 4164 DRAM)',               span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
+	{ id: 'dip18',  fam: 'dip', name: 'DIP-18 0.3" (41256 DRAM, PIC)',               span: 8.3,  len: 23.4, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.920"' },
+	{ id: 'dip20',  fam: 'dip', name: 'DIP-20 0.3" (74xx245, GAL16V8)',              span: 8.3,  len: 26.9, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.060"' },
+	{ id: 'dip24n', fam: 'dip', name: 'DIP-24 0.3" narrow (GAL22V10, 6116)',         span: 8.3,  len: 32.5, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.280"' },
+	{ id: 'dip28n', fam: 'dip', name: 'DIP-28 0.3" narrow (28C64, 6264 SRAM)',       span: 8.3,  len: 35.2, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.385"' },
+	{ id: 'dip24w', fam: 'dip', name: 'DIP-24 0.6" wide (2716, 8255, 6821)',         span: 15.9, len: 32.5, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.280", E max 0.625"' },
+	{ id: 'dip28w', fam: 'dip', name: 'DIP-28 0.6" wide (27C256, 6502, Z80 SIO)',    span: 15.9, len: 37.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.470"' },
+	{ id: 'dip32w', fam: 'dip', name: 'DIP-32 0.6" wide (27C010, 28C256, flash)',     span: 15.9, len: 42.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.665"' },
+	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.100"' },
+	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 62.5, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.480"' },
+	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.5, rowSp: 22.86, rail: 20.2, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
+];
+var PLA_DENSITY = 1.24; // g/cm3
+
+var $ = function (id) { return document.getElementById(id); };
+var sockEl = $('sock');
+(function () {
+	var grp = null;
+	PACKAGES.forEach(function (s) {
+		if (s.group) { grp = document.createElement('optgroup'); grp.label = s.group; sockEl.appendChild(grp); return; }
+		var o = document.createElement('option'); o.value = s.id; o.textContent = s.name; if (s.id === 's7') o.selected = true; (grp || sockEl).appendChild(o);
+	});
+})();
+function currentPkg() { var id = sockEl.value; for (var i = 0; i < PACKAGES.length; i++) if (PACKAGES[i].id === id) return PACKAGES[i]; return PACKAGES[1]; }
+
+// Small helpers for the shape builders (three.js) — defined before the families so they can use them.
+function rect(x, y, w, h) { var s = new THREE.Shape(); s.moveTo(x, y); s.lineTo(x + w, y); s.lineTo(x + w, y + h); s.lineTo(x, y + h); s.closePath(); return s; }
+function rectPath(x, y, w, h) { var s = new THREE.Path(); s.moveTo(x, y); s.lineTo(x + w, y); s.lineTo(x + w, y + h); s.lineTo(x, y + h); s.closePath(); return s; }
+function circlePath(cx, cy, d) { var hp = new THREE.Path(); hp.absarc(cx, cy, d / 2, 0, Math.PI * 2, true); return hp; }
+function extrude(shape, z0, dz, mat) {
+	var g = new THREE.ExtrudeGeometry(shape, { depth: dz, bevelEnabled: false, curveSegments: 24 });
+	var m = new THREE.Mesh(g, mat); m.position.z = z0; return m;
+}
+
+// ===========================================================================
+// Families. Each one knows only about what happens INSIDE a pocket:
+//  defaults(s, famChanged)   set slider defaults when a package of this family is selected
+//  pocket(s, p)              pocket size (before tolerance) and any extra params
+//  meshes(p, o, g)           add support meshes for the pocket at origin o (three.js)
+//  floorHole(p)              diameter of a hole through the floor under each pocket (0 = none)
+//  area(p)                   support footprint area (mm²) for the filament estimate
+//  table(p, s)               [label, value] for the "Support" row of the parameter table
+//  warnings(p, s, out)       push warning strings
+//  scad(p, L)                emit the SCAD support module body (inside pocket_pos(), origin = pocket corner)
+// Everything else — tray body, grid, fixed format, rim/recess, preview, exports — is family-agnostic.
+// ===========================================================================
+var FAMILIES = {
+	pga: {
+		defaults: function (s, famChanged) {
+			$('pedSize').value = s.ped || 16; $('ledge').value = s.ledge; $('pedOn').checked = !(s.cap > 0);
+			if (famChanged) { $('depth').value = 8.5; $('ped').value = 4; $('hole').checked = true; $('holeD').value = 10; if (parseInt($('rows').value) < 2) $('rows').value = 2; }
+		},
+		pocket: function (s, p) {
+			p.pkgW = s.id === 'custom' ? parseFloat($('cw').value) || 40 : s.w;
+			p.pkgH = s.id === 'custom' ? parseFloat($('ch').value) || 40 : s.h;
+			p.pedSize = parseFloat($('pedSize').value); p.pedOn = $('pedOn').checked; p.ledge = parseFloat($('ledge').value);
+			p.cap = s.cap || 0;
+			p.hole = $('hole').checked; p.holeD = Math.min(parseFloat($('holeD').value), Math.max(0, p.pedSize - 4));
+			if (p.hole && p.holeD < 3) p.hole = false;
+			p.pedInner = (p.cap > 0 && p.cap < 99) ? p.cap + 1.0 : 0;   // hollow pedestal above a capacitor zone
+			if (p.pedInner > 0 && p.pedSize < p.pedInner + 3) p.pedInner = 0;
+			if (p.cap >= 99) p.pedOn = false;                            // whole underside populated: never a pedestal
+			p.solidPed = p.pedOn && p.pedInner === 0;
+		},
+		meshes: function (p, o, g) {
+			var cx = o.x + p.pocketW / 2, cy = o.y + p.pocketH / 2;
+			if (p.pedOn) {
+				var ped = rect(cx - p.pedSize / 2, cy - p.pedSize / 2, p.pedSize, p.pedSize);
+				if (p.pedInner > 0) ped.holes.push(rectPath(cx - p.pedInner / 2, cy - p.pedInner / 2, p.pedInner, p.pedInner));
+				else if (p.hole) ped.holes.push(circlePath(cx, cy, p.holeD));
+				g.add(extrude(ped, p.floor, p.pedH, matSup));
+			}
+			if (p.ledge > 0) {
+				var lg = rect(o.x, o.y, p.pocketW, p.pocketH);
+				lg.holes.push(rectPath(o.x + p.ledge, o.y + p.ledge, p.pocketW - 2 * p.ledge, p.pocketH - 2 * p.ledge));
+				g.add(extrude(lg, p.floor, p.pedH, matSup));
+			}
+		},
+		floorHole: function (p) { return (p.hole && p.solidPed) ? p.holeD : 0; },
+		area: function (p) {
+			var a = 0;
+			if (p.pedOn) a += p.pedSize * p.pedSize - (p.pedInner > 0 ? p.pedInner * p.pedInner : (p.hole ? Math.PI * p.holeD * p.holeD / 4 : 0));
+			if (p.ledge > 0) a += p.pocketW * p.pocketH - (p.pocketW - 2 * p.ledge) * (p.pocketH - 2 * p.ledge);
+			return a;
+		},
+		table: function (p, s) {
+			var parts = [];
+			if (p.pedOn) parts.push((p.pedInner > 0 ? 'hollow pedestal ' : 'pedestal ') + p.pedSize + ' mm' + (s.ped > 0 ? ' (max ' + s.ped + ')' : ''));
+			if (p.ledge > 0) parts.push('ledge ' + p.ledge + ' mm (rim ~' + s.edge + ')');
+			return ['Support', parts.length ? parts.join(' + ') : 'none'];
+		},
+		warnings: function (p, s, w) {
+			if (p.pedOn && p.pedH > 0 && s.ped > 0 && p.pedSize > s.ped) w.push('Pedestal is larger than the pin-free centre, pins would sit on it.');
+			if ($('pedOn').checked && p.cap >= 99) w.push('This package has lands/capacitors across the underside, the pedestal is disabled. Use the edge ledge.');
+			if (p.pedOn && p.pedH > 0 && p.cap > 0 && p.cap < 99 && p.pedInner === 0) w.push('Underside carries capacitors inside ' + p.cap + ' mm; the pedestal must be at least ' + (p.cap + 4) + ' mm (hollow) or off, use the ledge.');
+			if (p.ledge > 0 && p.ledge > s.edge - 0.15) w.push('Ledge (' + p.ledge + ' mm) is wider than the pin-free substrate margin (~' + s.edge + ' mm), the outer pin row would land on it.');
+			if (p.ledge > 0 && s.edge < 1.2 && p.tol > 0.3) w.push('Thin ledge: keep the tolerance at 0.3 mm or less so the package cannot shift off it.');
+			if (p.pedH > 0 && p.pedH < 3.4) w.push('Support lower than the pin length (3.3 mm), pins would touch the floor.');
+			if (p.pedH > 0 && !p.pedOn && p.ledge === 0) w.push('No pedestal and no ledge: the package would rest on its pins.');
+		},
+		scad: function (p, L) {
+			L.push('ped_on = ' + (p.pedOn ? 1 : 0) + ';       // 1 = central pedestal');
+			L.push('ped_s = ' + p.pedSize + ';     // pedestal side, must fit inside the innermost pin row');
+			L.push('ped_in = ' + p.pedInner + ';    // square recess above a bottom-side capacitor zone, 0 = solid');
+			L.push('ledge = ' + p.ledge + ';      // edge ledge under the pin-free substrate rim, 0 = none');
+			L.push('hole_d = ' + ((p.hole && p.solidPed) ? p.holeD : 0) + ';     // push-out hole through pedestal and floor, 0 = none');
+			L.push('module support() {');
+			L.push('  if (ped_on) translate([pocket_w/2, pocket_h/2, 0]) difference() {');
+			L.push('    translate([-ped_s/2, -ped_s/2, 0]) cube([ped_s, ped_s, sup_h]);');
+			L.push('    if (ped_in > 0) translate([-ped_in/2, -ped_in/2, -1]) cube([ped_in, ped_in, sup_h + 2]);');
+			L.push('    else if (hole_d > 0) translate([0, 0, -1]) cylinder(d = hole_d, h = sup_h + 2);');
+			L.push('  }');
+			L.push('  if (ledge > 0) difference() {');
+			L.push('    cube([pocket_w, pocket_h, sup_h]);');
+			L.push('    translate([ledge, ledge, -1]) cube([pocket_w - 2*ledge, pocket_h - 2*ledge, sup_h + 2]);');
+			L.push('  }');
+			L.push('}');
+		}
+	},
+	qfp: {
+		defaults: function (s, famChanged) {
+			$('inset').value = s.inset;
+			if (famChanged) { if (parseInt($('rows').value) < 2) $('rows').value = 2; $('ped').value = 1.5; $('hole').checked = true; $('holeD').value = 8; }
+			// pocket depth follows the body thickness: pad + body + 1 mm headroom, rounded up to 0.5
+			$('depth').value = Math.max(2, Math.ceil((s.thick + parseFloat($('ped').value) + 1) * 2) / 2);
+		},
+		pocket: function (s, p) {
+			p.pkgW = s.span; p.pkgH = s.spanH;
+			p.inset = parseFloat($('inset').value);
+			p.padW = Math.max(2, s.body - 2 * p.inset); p.padH = Math.max(2, s.bodyH - 2 * p.inset);
+			p.hole = $('hole').checked; p.holeD = Math.min(parseFloat($('holeD').value), Math.max(0, Math.min(p.padW, p.padH) - 3));
+			if (p.hole && p.holeD < 3) p.hole = false;
+		},
+		meshes: function (p, o, g) {
+			var cx = o.x + p.pocketW / 2, cy = o.y + p.pocketH / 2;
+			var pad = rect(cx - p.padW / 2, cy - p.padH / 2, p.padW, p.padH);
+			if (p.hole) pad.holes.push(circlePath(cx, cy, p.holeD));
+			g.add(extrude(pad, p.floor, p.pedH, matSup));
+		},
+		floorHole: function (p) { return p.hole ? p.holeD : 0; },
+		area: function (p) { return p.padW * p.padH - (p.hole ? Math.PI * p.holeD * p.holeD / 4 : 0); },
+		table: function (p, s) { return ['Support pad', p.padW.toFixed(1) + ' × ' + p.padH.toFixed(1) + ' mm under a ' + s.body + ' × ' + s.bodyH + ' body']; },
+		warnings: function (p, s, w) {
+			if (p.inset < 0.25) w.push('Pad reaches the body edge: with QFP the lead feet start right there, keep at least 0.5 mm inset.');
+			if (s.id.indexOf('plcc') === 0 && p.inset < 1.0) w.push('PLCC J-leads tuck about 1 mm under the body, use an inset of 1.5 mm.');
+			if (p.pedH > 0 && p.pedH < 0.5) w.push('Pad lower than 0.5 mm, lead feet may touch the floor.');
+			if (p.depth < s.thick + p.pedH) w.push('Pocket shallower than pad + body (' + (s.thick + p.pedH).toFixed(1) + ' mm), the chip would stick out above the walls.');
+		},
+		scad: function (p, L) {
+			L.push('pad_w = ' + p.padW.toFixed(2) + ';   // support pad under the body, leads float');
+			L.push('pad_h = ' + p.padH.toFixed(2) + ';');
+			L.push('hole_d = ' + (p.hole ? p.holeD : 0) + ';     // push-out hole through pad and floor, 0 = none');
+			L.push('module support() {');
+			L.push('  translate([pocket_w/2, pocket_h/2, 0]) difference() {');
+			L.push('    translate([-pad_w/2, -pad_h/2, 0]) cube([pad_w, pad_h, sup_h]);');
+			L.push('    if (hole_d > 0) translate([0, 0, -1]) cylinder(d = hole_d, h = sup_h + 2);');
+			L.push('  }');
+			L.push('}');
+		}
+	},
+	dip: {
+		defaults: function (s, famChanged) {
+			$('railW').value = s.rail;
+			if (famChanged) { $('rows').value = 1; if (parseInt($('cols').value) < 3) $('cols').value = 4; $('depth').value = 8.5; $('ped').value = 4; }
+		},
+		pocket: function (s, p) {
+			p.perRow = parseInt($('perRow').value); p.chipGap = parseFloat($('chipGap').value);
+			p.pkgW = s.span; p.pkgH = s.len;
+			p.pocketHOverride = p.perRow * s.len + (p.perRow - 1) * p.chipGap;   // channel length before tolerance
+			p.railW = Math.min(parseFloat($('railW').value), s.span + p.tol - 2);
+		},
+		meshes: function (p, o, g) {
+			g.add(extrude(rect(o.x + p.pocketW / 2 - p.railW / 2, o.y + 1, p.railW, p.pocketH - 2), p.floor, p.pedH, matSup));
+		},
+		floorHole: function () { return 0; },
+		area: function (p) { return p.railW * (p.pocketH - 2); },
+		table: function (p, s) { return ['Centre rail', p.railW.toFixed(1) + ' mm wide (max ' + (s.rowSp - 1.4).toFixed(1) + ' = row spacing − pins)']; },
+		warnings: function (p, s, w) {
+			if (p.railW > s.rowSp - 1.4) w.push('Rail is wider than the gap between the pin rows, pins would sit on the rail.');
+			if (p.pedH > 0 && p.pedH < 3.5) w.push('Rail lower than the DIP pin length (~3.5 mm), pin tips would touch the floor.');
+		},
+		scad: function (p, L) {
+			L.push('chips_per_row = ' + p.perRow + ';');
+			L.push('chip_gap = ' + p.chipGap + ';');
+			L.push('rail_w = ' + p.railW.toFixed(2) + ';     // centre rail between the pin rows (< row spacing − pins)');
+			L.push('module support() { translate([pocket_w/2 - rail_w/2, 1, 0]) cube([rail_w, pocket_h - 2, sup_h]); }');
+		}
+	}
+};
+
+function params() {
+	var s = currentPkg(), F = FAMILIES[s.fam];
+	var p = {
+		sock: s, fam: s.fam, tol: parseFloat($('tol').value),
+		rows: parseInt($('rows').value), cols: parseInt($('cols').value),
+		wall: parseFloat($('wall').value), floor: parseFloat($('floor').value),
+		depth: parseFloat($('depth').value), pedH: parseFloat($('ped').value), rimH: parseFloat($('rim').value),
+		rimW: 2.0, label: $('labelInput').value.toUpperCase().replace(/"/g, ''), pocketHOverride: 0
+	};
+	F.pocket(s, p);
+	p.pocketW = +(p.pkgW + p.tol).toFixed(2);
+	p.pocketH = +((p.pocketHOverride || p.pkgH) + p.tol).toFixed(2);
+	p.fixed = $('fixedOn').checked; p.clamped = false;
+	if (p.fixed) {
+		p.outerW = Math.max(40, parseFloat($('fixedW').value) || 170);
+		p.outerH = Math.max(40, parseFloat($('fixedH').value) || 120);
+		p.maxCols = Math.max(1, Math.floor((p.outerW - p.wall) / (p.pocketW + p.wall)));
+		p.maxRows = Math.max(1, Math.floor((p.outerH - p.wall) / (p.pocketH + p.wall)));
+		if (p.cols > p.maxCols) { p.cols = p.maxCols; p.clamped = true; }
+		if (p.rows > p.maxRows) { p.rows = p.maxRows; p.clamped = true; }
+		p.marginX = (p.outerW - (p.cols * p.pocketW + (p.cols - 1) * p.wall)) / 2;
+		p.marginY = (p.outerH - (p.rows * p.pocketH + (p.rows - 1) * p.wall)) / 2;
+		p.fits = p.marginX >= p.wall - 1e-6 && p.marginY >= p.wall - 1e-6;
+	} else {
+		p.outerW = p.cols * p.pocketW + (p.cols + 1) * p.wall;
+		p.outerH = p.rows * p.pocketH + (p.rows + 1) * p.wall;
+		p.marginX = p.wall; p.marginY = p.wall; p.fits = true;
+	}
+	p.bodyH = p.floor + p.depth;
+	p.totalH = p.bodyH + p.rimH;
+	p.recessH = p.rimH > 0 ? p.rimH + 0.3 : 0;   // bottom step-in so trays nest
+	p.recessW = p.rimH > 0 ? p.rimW + p.tol / 2 : 0;
+	p.floorHoleD = p.pedH > 0 ? F.floorHole(p) : 0;
+	return p;
+}
+function pocketOrigin(p, r, c) { return { x: p.marginX + c * (p.pocketW + p.wall), y: p.marginY + r * (p.pocketH + p.wall) }; }
+
+// ===========================================================================
+// three.js scene (Z-up, like the printer)
+// ===========================================================================
+var canvas = $('canvas3d'), renderer, scene, camera, controls, trayGroup, ok3d = false;
+try {
+	if (!window.THREE) throw new Error('three.js did not load (CDN blocked / offline).');
+	renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+	renderer.setPixelRatio(window.devicePixelRatio);
+	scene = new THREE.Scene(); scene.background = new THREE.Color(0x07080a);
+	camera = new THREE.PerspectiveCamera(40, 1, 0.1, 3000); camera.up.set(0, 0, 1);
+	scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+	var d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(120, -160, 220); scene.add(d1);
+	var d2 = new THREE.DirectionalLight(0xf97316, 0.25); d2.position.set(-150, 120, -80); scene.add(d2);
+	var gridHelper = new THREE.GridHelper(400, 40, 0x1f2937, 0x161a21); gridHelper.rotation.x = Math.PI / 2; gridHelper.position.z = -0.05; scene.add(gridHelper);
+	trayGroup = new THREE.Group(); scene.add(trayGroup);
+	controls = new THREE.OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08;
+	controls.addEventListener('start', function () { $('spin').checked = false; });
+	ok3d = true;
+} catch (e) {
+	$('err').style.display = 'block'; $('err').textContent = 'Preview unavailable: ' + e.message + ' The OpenSCAD export still works.';
+}
+var matGrey = ok3d && new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.05 });
+var matOrange = ok3d && new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.5, metalness: 0.05 });
+var matSup = ok3d && new THREE.MeshStandardMaterial({ color: 0x8b9bb4, roughness: 0.7, metalness: 0.05 }); // supports: lighter so they stand out
+
+function buildTray(p) {
+	var g = new THREE.Group(), F = FAMILIES[p.fam];
+	function floorHoles(shape) {
+		if (!p.floorHoleD) return shape;
+		for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
+			var o = pocketOrigin(p, r, c); shape.holes.push(circlePath(o.x + p.pocketW / 2, o.y + p.pocketH / 2, p.floorHoleD));
+		}
+		return shape;
+	}
+	// 1. base slab with bottom step-in (nesting recess)
+	if (p.recessH > 0) {
+		g.add(extrude(floorHoles(rect(p.recessW, p.recessW, p.outerW - 2 * p.recessW, p.outerH - 2 * p.recessW)), 0, p.recessH, matGrey));
+		g.add(extrude(floorHoles(rect(0, 0, p.outerW, p.outerH)), p.recessH, p.floor - p.recessH, matGrey));
+	} else {
+		g.add(extrude(floorHoles(rect(0, 0, p.outerW, p.outerH)), 0, p.floor, matGrey));
+	}
+	// 2. pocket layer: outer rect minus pockets
+	var walls = rect(0, 0, p.outerW, p.outerH);
+	for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
+		var o = pocketOrigin(p, r, c); walls.holes.push(rectPath(o.x, o.y, p.pocketW, p.pocketH));
+	}
+	g.add(extrude(walls, p.floor, p.depth, matGrey));
+	// 3. family-specific supports
+	if (p.pedH > 0) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
+	// 4. stacking rim
+	if (p.rimH > 0) {
+		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
+		g.add(extrude(rim, p.bodyH, p.rimH, matOrange));
+	}
+	g.position.set(-p.outerW / 2, -p.outerH / 2, 0);
+	return g;
+}
+
+function volumeMm3(p) {
+	var v = p.outerW * p.outerH * p.floor;
+	if (p.recessH > 0) v -= (p.outerW * p.outerH - (p.outerW - 2 * p.recessW) * (p.outerH - 2 * p.recessW)) * p.recessH;
+	if (p.floorHoleD) v -= p.rows * p.cols * Math.PI * p.floorHoleD * p.floorHoleD / 4 * p.floor;
+	v += (p.outerW * p.outerH - p.rows * p.cols * p.pocketW * p.pocketH) * p.depth;
+	if (p.pedH > 0) v += p.rows * p.cols * FAMILIES[p.fam].area(p) * p.pedH;
+	if (p.rimH > 0) v += (p.outerW * p.outerH - (p.outerW - 2 * p.rimW) * (p.outerH - 2 * p.rimW)) * p.rimH;
+	return v;
+}
+
+var lastP = null;
+function rebuild() {
+	var p = params(); lastP = p; var s = p.sock, F = FAMILIES[p.fam];
+	// show only the rows that belong to this family (data-fam="pga qfp" = several)
+	document.querySelectorAll('[data-fam]').forEach(function (el) {
+		var fams = el.getAttribute('data-fam').split(' ');
+		el.style.display = (fams.indexOf(p.fam) >= 0 || (fams.indexOf('custom') >= 0 && s.id === 'custom')) ? 'grid' : 'none';
+	});
+	$('fixedRow').style.display = p.fixed ? 'grid' : 'none';
+	if (p.fixed) {
+		$('fixedInfo').innerHTML = 'Fits max. <strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets · outer margin ' + p.marginX.toFixed(1) + ' / ' + p.marginY.toFixed(1) + ' mm';
+		if (p.clamped) { $('rows').value = p.rows; $('cols').value = p.cols; }
+	}
+	$('rowsV').textContent = p.rows; $('colsV').textContent = p.cols;
+	$('tolV').textContent = '+' + p.tol.toFixed(2) + ' mm'; $('wallV').textContent = p.wall.toFixed(1) + ' mm';
+	$('floorV').textContent = p.floor.toFixed(1) + ' mm'; $('depthV').textContent = p.depth.toFixed(1) + ' mm';
+	$('pedV').textContent = p.pedH.toFixed(1) + ' mm'; $('rimV').textContent = p.rimH.toFixed(1) + ' mm';
+	if (p.fam === 'pga') { $('pedSizeV').textContent = p.pedSize + ' mm'; $('ledgeV').textContent = p.ledge.toFixed(2) + ' mm'; }
+	if (p.fam === 'qfp') { $('insetV').textContent = p.inset.toFixed(2) + ' mm'; }
+	if (p.fam !== 'dip') { $('holeDV').textContent = p.holeD + ' mm' + (p.holeD < parseFloat($('holeD').value) ? ' (max for support)' : ''); }
+	if (p.fam === 'dip') { $('perRowV').textContent = p.perRow; $('chipGapV').textContent = p.chipGap.toFixed(2) + ' mm'; $('railWV').textContent = p.railW.toFixed(1) + ' mm'; }
+	if (p.fam === 'dip') {
+		$('tPkg').textContent = s.span + ' × ' + s.len + ' mm per chip · ' + s.rowSp + ' mm row spacing';
+		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm channel (' + p.perRow + ' chips)';
+	} else {
+		$('tPkg').textContent = p.pkgW + ' × ' + p.pkgH + ' mm' + (s.pins ? ' · ' + s.pins + ' pins' : '') + (s.body ? ' lead span · body ' + s.body + ' × ' + s.bodyH : '');
+		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm';
+	}
+	var tr = F.table(p, s); $('tSupK').textContent = tr[0]; $('tSup').textContent = tr[1];
+	$('tOuter').textContent = p.outerW.toFixed(1) + ' × ' + p.outerH.toFixed(1) + ' mm';
+	$('tH').textContent = p.totalH.toFixed(1) + ' mm';
+	$('tSrc').textContent = s.src;
+	var warn = [];
+	if (p.fixed && p.clamped) warn.push('That many pockets do not fit the ' + p.outerW + ' × ' + p.outerH + ' format, reduced to ' + p.rows + ' × ' + p.cols + '.');
+	if (p.fixed && !p.fits) warn.push('The format is smaller than one pocket plus walls.');
+	F.warnings(p, s, warn);
+	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
+	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
+	$('sCount').textContent = (p.rows * p.cols) + (p.fam === 'dip' ? ' channels · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
+	$('sMass').textContent = '~' + (volumeMm3(p) / 1000 * PLA_DENSITY).toFixed(0) + ' g PLA';
+	if (!ok3d) return;
+	while (trayGroup.children.length) { var ch = trayGroup.children[0]; trayGroup.remove(ch); ch.traverse(function (m) { if (m.geometry) m.geometry.dispose(); }); }
+	trayGroup.add(buildTray(p));
+}
+
+function fitMax() {
+	var p = params(); if (!p.fixed) return;
+	$('rows').max = Math.max(12, Math.min(40, p.maxRows)); $('cols').max = Math.max(12, Math.min(40, p.maxCols));
+	$('rows').value = Math.min(40, p.maxRows); $('cols').value = Math.min(40, p.maxCols); rebuild(); setView(viewMode);
+}
+var lastFam = null;
+function applyPackageDefaults() {
+	var s = currentPkg(); FAMILIES[s.fam].defaults(s, s.fam !== lastFam); lastFam = s.fam;
+}
+
+var viewMode = 'iso';
+function setView(mode) {
+	viewMode = mode; ['vIso', 'vTop', 'vBottom'].forEach(function (id) { $(id).classList.remove('active'); });
+	$(mode === 'iso' ? 'vIso' : mode === 'top' ? 'vTop' : 'vBottom').classList.add('active');
+	if (!ok3d) return;
+	var p = lastP || params(); var d = Math.max(p.outerW, p.outerH) * 1.6 + 40;
+	if (mode === 'iso') camera.position.set(d * 0.7, -d * 0.7, d * 0.55);
+	else if (mode === 'top') camera.position.set(0, -0.001, d);
+	else camera.position.set(0, -0.001, -d);
+	controls.target.set(0, 0, p.totalH / 2); controls.update();
+}
+function resize() {
+	if (!ok3d) return;
+	var w = canvas.clientWidth, h = canvas.clientHeight;
+	if (canvas.width !== Math.floor(w * window.devicePixelRatio) || canvas.height !== Math.floor(h * window.devicePixelRatio)) {
+		renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+	}
+}
+function animate() {
+	requestAnimationFrame(animate); if (!ok3d) return;
+	resize(); if ($('spin').checked) trayGroup.rotation.z += 0.004; controls.update(); renderer.render(scene, camera);
+}
+
+// ===========================================================================
+// Exports
+// ===========================================================================
+function download(name, data, type) {
+	var blob = data instanceof Blob ? data : new Blob([data], { type: type || 'application/octet-stream' });
+	var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+	setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function fileBase(p) { return 'tray_' + p.sock.id + '_' + p.rows + 'x' + p.cols + (p.fam === 'dip' ? 'x' + p.perRow : '') + (p.fixed ? '_' + p.outerW + 'x' + p.outerH : ''); }
+
+function exportScad() {
+	var p = params(), s = p.sock, L = [];
+	L.push('// Retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
+	L.push('// ' + s.name + ' — ' + s.src);
+	L.push('// family: ' + p.fam);
+	L.push('$fn = 48;');
+	L.push('pocket_w = ' + p.pocketW + ';    // pocket incl. tolerance ' + p.tol);
+	L.push('pocket_h = ' + p.pocketH + ';');
+	L.push('outer_fixed = ' + (p.fixed ? 1 : 0) + ';  // 1 = fixed outer format so trays for different packages stack together');
+	L.push('outer_w_fixed = ' + p.outerW + ';');
+	L.push('outer_h_fixed = ' + p.outerH + ';');
+	L.push('rows = ' + p.rows + ';');
+	L.push('cols = ' + p.cols + ';');
+	L.push('wall = ' + p.wall + ';       // wall between pockets');
+	L.push('floor_t = ' + p.floor + ';   // floor thickness');
+	L.push('depth = ' + p.depth + ';     // pocket depth');
+	L.push('sup_h = ' + p.pedH + ';      // support height (pedestal / ledge / pad / rail)');
+	L.push('floor_hole_d = ' + p.floorHoleD + ';  // push-out hole through the floor, 0 = none');
+	L.push('rim_h = ' + p.rimH + ';      // stacking rim height, 0 = no stacking');
+	L.push('rim_w = ' + p.rimW + ';');
+	L.push('tol = ' + p.tol + ';');
+	L.push('label = "' + p.label + '";');
+	L.push('label_size = 5;');
+	L.push('label_depth = 0.8;');
+	L.push('');
+	L.push('outer_w = outer_fixed ? outer_w_fixed : cols * pocket_w + (cols + 1) * wall;');
+	L.push('outer_h = outer_fixed ? outer_h_fixed : rows * pocket_h + (rows + 1) * wall;');
+	L.push('margin_x = (outer_w - (cols * pocket_w + (cols - 1) * wall)) / 2;  // pockets centred');
+	L.push('margin_y = (outer_h - (rows * pocket_h + (rows - 1) * wall)) / 2;');
+	L.push('body_h = floor_t + depth;');
+	L.push('recess_h = rim_h > 0 ? rim_h + 0.3 : 0;');
+	L.push('recess_w = rim_h > 0 ? rim_w + tol / 2 : 0;');
+	L.push('');
+	L.push('module pocket_pos() { for (r = [0:rows-1], c = [0:cols-1]) translate([margin_x + c*(pocket_w+wall), margin_y + r*(pocket_h+wall), 0]) children(); }');
+	L.push('');
+	L.push('// ---- family-specific support inside each pocket (origin = pocket corner at floor level) ----');
+	FAMILIES[p.fam].scad(p, L);
+	L.push('');
+	L.push('module tray() {');
+	L.push('  difference() {');
+	L.push('    union() {');
+	L.push('      cube([outer_w, outer_h, body_h]);');
+	L.push('      if (rim_h > 0) translate([0, 0, body_h]) difference() {');
+	L.push('        cube([outer_w, outer_h, rim_h]);');
+	L.push('        translate([rim_w, rim_w, -1]) cube([outer_w - 2*rim_w, outer_h - 2*rim_w, rim_h + 2]);');
+	L.push('      }');
+	L.push('    }');
+	L.push('    pocket_pos() translate([0, 0, floor_t]) cube([pocket_w, pocket_h, depth + rim_h + 1]);');
+	L.push('    if (rim_h > 0) difference() {   // bottom step-in so the tray above nests into the rim below');
+	L.push('      translate([-1, -1, -1]) cube([outer_w + 2, outer_h + 2, recess_h + 1]);');
+	L.push('      translate([recess_w, recess_w, -2]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, recess_h + 4]);');
+	L.push('    }');
+	L.push('    if (len(label) > 0) translate([outer_w/2, label_depth, body_h/2]) rotate([90, 0, 0]) linear_extrude(height = label_depth + 0.01) text(label, size = label_size, halign = "center", valign = "center");');
+	L.push('  }');
+	L.push('  if (sup_h > 0) pocket_pos() translate([0, 0, floor_t]) support();');
+	L.push('}');
+	L.push('');
+	L.push('difference() {');
+	L.push('  tray();');
+	L.push('  if (floor_hole_d > 0 && sup_h > 0) pocket_pos() translate([pocket_w/2, pocket_h/2, -1]) cylinder(d = floor_hole_d, h = floor_t + 2);');
+	L.push('}');
+	download(fileBase(p) + '.scad', L.join('\n'), 'text/plain');
+}
+
+function exportStl() {
+	if (!ok3d) { alert('The preview is not running and the STL is exported from it. Use the OpenSCAD export.'); return; }
+	var p = params();
+	var g = buildTray(p); g.position.set(0, 0, 0); g.updateMatrixWorld(true);
+	var exporter = new THREE.STLExporter();
+	download(fileBase(p) + '.stl', new Blob([exporter.parse(g, { binary: true })], { type: 'model/stl' }));
+}
+
+// ===========================================================================
+['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall', 'floor', 'depth', 'ped',
+ 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'rim', 'hole', 'holeD', 'labelInput'].forEach(function (id) {
+	$(id).addEventListener('input', function () {
+		if (id === 'sock') applyPackageDefaults();
+		rebuild();
+		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
+	});
+});
+applyPackageDefaults(); rebuild(); setView('iso'); animate();
+</script>
+</body>
+</html>
