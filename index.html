@@ -125,7 +125,7 @@
 			<div class="check"><input type="checkbox" id="spin"><label for="spin">Auto-rotate preview</label></div>
 		</div>
 		<div class="field">
-			<label for="labelInput">4. Label (engraved into the front wall, OpenSCAD export only)</label>
+			<label for="labelInput">4. Label (engraved into the front wall; exact in the OpenSCAD export)</label>
 			<input type="text" id="labelInput" value="AMD K6-III+" maxlength="40" placeholder="e.g. INTEL DX2-66, AM386DX-40, 8042 KBC, 82C822 ...">
 		</div>
 
@@ -149,7 +149,7 @@
 	</div>
 
 	<div class="preview-panel">
-		<div class="view-label">WebGL · left drag = rotate · wheel = zoom · right drag = pan · label only in SCAD</div>
+		<div class="view-label">WebGL · left drag = rotate · wheel = zoom · right drag = pan · label is engraved in the SCAD export</div>
 		<div class="view-btns">
 			<button id="vIso" class="active" onclick="setView('iso')">Isometric</button>
 			<button id="vTop" onclick="setView('top')">Top</button>
@@ -167,7 +167,9 @@
 		Trays nest by a top rim and a matching bottom recess; heights may differ between trays, only the outer format must match.
 		PGA packages rest on a central pedestal inside the pin-free centre, or on an edge ledge / hollow pedestal where the underside carries capacitors.
 		QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube.
-		Dimensions come from the datasheets and JEDEC outlines listed per package.
+		Dimensions come from the datasheets and JEDEC outlines listed per package.<br>
+		<span style="color:#6b7280">Chip Tray Generator · © 2026 Pavol "Lopo" Hluchý · MIT license ·
+		<a href="https://github.com/Lopo/ChipTrayGenerator" style="color:#f97316;text-decoration:none">github.com/Lopo/ChipTrayGenerator</a> · preview by three.js</span>
 	</footer>
 </div>
 
@@ -412,7 +414,7 @@ function params() {
 		rows: parseInt($('rows').value), cols: parseInt($('cols').value),
 		wall: parseFloat($('wall').value), floor: parseFloat($('floor').value),
 		depth: parseFloat($('depth').value), pedH: parseFloat($('ped').value), rimH: parseFloat($('rim').value),
-		rimW: 2.0, label: $('labelInput').value.toUpperCase().replace(/"/g, ''), pocketHOverride: 0
+		rimW: 2.0, label: $('labelInput').value.replace(/["\\]/g, ''), pocketHOverride: 0   // case kept as typed; quotes/backslashes dropped for the SCAD string
 	};
 	F.pocket(s, p);
 	p.pocketW = +(p.pkgW + p.tol).toFixed(2);
@@ -435,8 +437,11 @@ function params() {
 	}
 	p.bodyH = p.floor + p.depth;
 	p.totalH = p.bodyH + p.rimH;
-	p.recessH = p.rimH > 0 ? p.rimH + 0.3 : 0;   // bottom step-in so trays nest
+	// Nesting recess: a ring cut into the underside along the outer edge, rim + 0.3 high and rim_w + tol/2 wide.
+	// It must lie under the outer wall; its height may exceed the floor (the step then sits higher up the wall).
+	p.recessH = p.rimH > 0 ? Math.min(p.rimH + 0.3, p.bodyH - 1) : 0;
 	p.recessW = p.rimH > 0 ? p.rimW + p.tol / 2 : 0;
+	p.recessOK = p.recessW <= Math.min(p.marginX, p.marginY) + 1e-6;
 	p.floorHoleD = p.pedH > 0 ? F.floorHole(p) : 0;
 	return p;
 }
@@ -466,6 +471,21 @@ try {
 var matGrey = ok3d && new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.05 });
 var matOrange = ok3d && new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.5, metalness: 0.05 });
 var matSup = ok3d && new THREE.MeshStandardMaterial({ color: 0x8b9bb4, roughness: 0.7, metalness: 0.05 }); // supports: lighter so they stand out
+var matLabel = ok3d && new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.9 });
+var labelFont = null;   // loaded asynchronously; the label is preview-only (the SCAD export engraves it for real)
+if (ok3d) new THREE.FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/fonts/helvetiker_regular.typeface.json',
+	function (f) { labelFont = f; rebuild(); }, undefined, function () { labelFont = null; });
+function labelMesh(p) {
+	if (!labelFont || !p.label) return null;
+	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: 5, height: 0.3, curveSegments: 6 });
+	geo.computeBoundingBox(); var bb = geo.boundingBox;
+	geo.translate(-(bb.max.x + bb.min.x) / 2, -(bb.max.y + bb.min.y) / 2, 0);
+	var m = new THREE.Mesh(geo, matLabel);
+	m.rotation.x = Math.PI / 2;                             // text in the XZ plane, extruded towards -Y (out of the front wall)
+	m.position.set(p.outerW / 2, 0.25, p.bodyH / 2);        // sits 0.25 mm inside the wall, pokes 0.05 mm out: reads as engraved
+	m.userData.previewOnly = true;
+	return m;
+}
 
 function buildTray(p) {
 	var g = new THREE.Group(), F = FAMILIES[p.fam];
@@ -476,19 +496,23 @@ function buildTray(p) {
 		}
 		return shape;
 	}
-	// 1. base slab with bottom step-in (nesting recess)
-	if (p.recessH > 0) {
-		g.add(extrude(floorHoles(rect(p.recessW, p.recessW, p.outerW - 2 * p.recessW, p.outerH - 2 * p.recessW)), 0, p.recessH, matGrey));
-		g.add(extrude(floorHoles(rect(0, 0, p.outerW, p.outerH)), p.recessH, p.floor - p.recessH, matGrey));
-	} else {
-		g.add(extrude(floorHoles(rect(0, 0, p.outerW, p.outerH)), 0, p.floor, matGrey));
+	// Footprints: full outline, and the outline inset by the nesting recess (used below z = recessH).
+	function full() { return rect(0, 0, p.outerW, p.outerH); }
+	function inset() { return p.recessH > 0 ? rect(p.recessW, p.recessW, p.outerW - 2 * p.recessW, p.outerH - 2 * p.recessW) : full(); }
+	function withPockets(shape) {
+		for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
+			var o = pocketOrigin(p, r, c); shape.holes.push(rectPath(o.x, o.y, p.pocketW, p.pocketH));
+		}
+		return shape;
 	}
-	// 2. pocket layer: outer rect minus pockets
-	var walls = rect(0, 0, p.outerW, p.outerH);
-	for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
-		var o = pocketOrigin(p, r, c); walls.holes.push(rectPath(o.x, o.y, p.pocketW, p.pocketH));
-	}
-	g.add(extrude(walls, p.floor, p.depth, matGrey));
+	// 1. floor slab: inset footprint up to the recess height, full footprint above it
+	var zA = Math.min(p.recessH, p.floor);
+	if (zA > 0) g.add(extrude(floorHoles(inset()), 0, zA, matGrey));
+	if (p.floor > zA) g.add(extrude(floorHoles(full()), zA, p.floor - zA, matGrey));
+	// 2. wall layer: same rule, minus the pockets (the recess may reach above the floor when it sits under the wall)
+	var zB = Math.max(p.floor, Math.min(p.recessH, p.bodyH));
+	if (zB > p.floor) g.add(extrude(withPockets(inset()), p.floor, zB - p.floor, matGrey));
+	if (p.bodyH > zB) g.add(extrude(withPockets(full()), zB, p.bodyH - zB, matGrey));
 	// 3. family-specific supports
 	if (p.pedH > 0) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
@@ -496,6 +520,7 @@ function buildTray(p) {
 		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
 		g.add(extrude(rim, p.bodyH, p.rimH, matOrange));
 	}
+	var lm = labelMesh(p); if (lm) g.add(lm);
 	g.position.set(-p.outerW / 2, -p.outerH / 2, 0);
 	return g;
 }
@@ -545,6 +570,8 @@ function rebuild() {
 	var warn = [];
 	if (p.fixed && p.clamped) warn.push('That many pockets do not fit the ' + p.outerW + ' × ' + p.outerH + ' format, reduced to ' + p.rows + ' × ' + p.cols + '.');
 	if (p.fixed && !p.fits) warn.push('The format is smaller than one pocket plus walls.');
+	if (p.rimH > 0 && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
+	if (p.rimH > 0 && p.rimH + 0.3 > p.bodyH - 1) warn.push('Rim too high for this tray: recess limited to ' + p.recessH.toFixed(1) + ' mm.');
 	F.warnings(p, s, warn);
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
 	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
@@ -620,6 +647,7 @@ function exportScad() {
 	L.push('rim_w = ' + p.rimW + ';');
 	L.push('tol = ' + p.tol + ';');
 	L.push('label = "' + p.label + '";');
+	L.push('label_font = "Liberation Sans";  // OpenSCAD default; the preview uses a similar sans font');
 	L.push('label_size = 5;');
 	L.push('label_depth = 0.8;');
 	L.push('');
@@ -650,7 +678,7 @@ function exportScad() {
 	L.push('      translate([-1, -1, -1]) cube([outer_w + 2, outer_h + 2, recess_h + 1]);');
 	L.push('      translate([recess_w, recess_w, -2]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, recess_h + 4]);');
 	L.push('    }');
-	L.push('    if (len(label) > 0) translate([outer_w/2, label_depth, body_h/2]) rotate([90, 0, 0]) linear_extrude(height = label_depth + 0.01) text(label, size = label_size, halign = "center", valign = "center");');
+	L.push('    if (len(label) > 0) translate([outer_w/2, label_depth, body_h/2]) rotate([90, 0, 0]) linear_extrude(height = label_depth + 0.01) text(label, size = label_size, font = label_font, halign = "center", valign = "center");');
 	L.push('  }');
 	L.push('  if (sup_h > 0) pocket_pos() translate([0, 0, floor_t]) support();');
 	L.push('}');
@@ -665,7 +693,9 @@ function exportScad() {
 function exportStl() {
 	if (!ok3d) { alert('The preview is not running and the STL is exported from it. Use the OpenSCAD export.'); return; }
 	var p = params();
-	var g = buildTray(p); g.position.set(0, 0, 0); g.updateMatrixWorld(true);
+	var g = buildTray(p); g.position.set(0, 0, 0);
+	g.children.filter(function (m) { return m.userData.previewOnly; }).forEach(function (m) { g.remove(m); });
+	g.updateMatrixWorld(true);
 	var exporter = new THREE.STLExporter();
 	download(fileBase(p) + '.stl', new Blob([exporter.parse(g, { binary: true })], { type: 'model/stl' }));
 }
