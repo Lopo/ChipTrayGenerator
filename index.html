@@ -118,7 +118,7 @@
 		</div>
 		<div class="row" data-fam="dip">
 			<div class="field"><label for="railW">Centre rail width <span class="val" id="railWV">12.6 mm</span></label><input type="range" id="railW" min="2" max="24" step="0.2" value="12.6"></div>
-			<div></div>
+			<div class="check"><input type="checkbox" id="dipHoriz"><label for="dipHoriz">Channels along the width (rotate 90°)</label></div>
 		</div>
 		<div class="row">
 			<div class="field"><label for="rim">Stacking rim height <span class="val" id="rimV">2.0 mm</span></label><input type="range" id="rim" min="0" max="5" step="0.5" value="2"></div>
@@ -384,17 +384,26 @@ var FAMILIES = {
 		},
 		pocket: function (s, p) {
 			p.perRow = parseInt($('perRow').value); p.chipGap = parseFloat($('chipGap').value);
-			p.pkgW = s.span; p.pkgH = s.len;
-			p.pocketHOverride = p.perRow * s.len + (p.perRow - 1) * p.chipGap;   // channel length before tolerance
+			p.dipHoriz = $('dipHoriz').checked; p.perRowClamped = false;
+			// In a fixed format, drop chips per channel until one channel fits along its axis.
+			if ($('fixedOn').checked) {
+				var avail = (p.dipHoriz ? parseFloat($('fixedW').value) : parseFloat($('fixedH').value)) - 2 * p.wall - p.tol;
+				var maxChips = Math.floor((avail + p.chipGap) / (s.len + p.chipGap));
+				if (p.perRow > maxChips) { p.perRow = Math.max(1, maxChips); p.perRowClamped = true; }
+			}
+			var chLen = p.perRow * s.len + (p.perRow - 1) * p.chipGap;   // channel length before tolerance
+			if (p.dipHoriz) { p.pkgW = chLen; p.pkgH = s.span; } else { p.pkgW = s.span; p.pkgH = chLen; }
 			p.railW = Math.min(parseFloat($('railW').value), s.span + p.tol - 2);
 		},
 		meshes: function (p, o, g) {
-			g.add(extrude(rect(o.x + p.pocketW / 2 - p.railW / 2, o.y + 1, p.railW, p.pocketH - 2), p.floor, p.pedH, matSup));
+			if (p.dipHoriz) g.add(extrude(rect(o.x + 1, o.y + p.pocketH / 2 - p.railW / 2, p.pocketW - 2, p.railW), p.floor, p.pedH, matSup));
+			else g.add(extrude(rect(o.x + p.pocketW / 2 - p.railW / 2, o.y + 1, p.railW, p.pocketH - 2), p.floor, p.pedH, matSup));
 		},
 		floorHole: function () { return 0; },
-		area: function (p) { return p.railW * (p.pocketH - 2); },
+		area: function (p) { return p.railW * ((p.dipHoriz ? p.pocketW : p.pocketH) - 2); },
 		table: function (p, s) { return ['Centre rail', p.railW.toFixed(1) + ' mm wide (max ' + (s.rowSp - 1.4).toFixed(1) + ' = row spacing − pins)']; },
 		warnings: function (p, s, w) {
+			if (p.perRowClamped) w.push('Chips per channel reduced to ' + p.perRow + ' so one channel fits the fixed format' + (p.dipHoriz ? '' : ' (try "Channels along the width")') + '.');
 			if (p.railW > s.rowSp - 1.4) w.push('Rail is wider than the gap between the pin rows, pins would sit on the rail.');
 			if (p.pedH > 0 && p.pedH < 3.5) w.push('Rail lower than the DIP pin length (~3.5 mm), pin tips would touch the floor.');
 		},
@@ -402,7 +411,8 @@ var FAMILIES = {
 			L.push('chips_per_row = ' + p.perRow + ';');
 			L.push('chip_gap = ' + p.chipGap + ';');
 			L.push('rail_w = ' + p.railW.toFixed(2) + ';     // centre rail between the pin rows (< row spacing − pins)');
-			L.push('module support() { translate([pocket_w/2 - rail_w/2, 1, 0]) cube([rail_w, pocket_h - 2, sup_h]); }');
+			L.push('rail_along_x = ' + (p.dipHoriz ? 1 : 0) + ';  // 1 = channels run along the tray width');
+			L.push('module support() { if (rail_along_x) translate([1, pocket_h/2 - rail_w/2, 0]) cube([pocket_w - 2, rail_w, sup_h]); else translate([pocket_w/2 - rail_w/2, 1, 0]) cube([rail_w, pocket_h - 2, sup_h]); }');
 		}
 	}
 };
@@ -414,11 +424,11 @@ function params() {
 		rows: parseInt($('rows').value), cols: parseInt($('cols').value),
 		wall: parseFloat($('wall').value), floor: parseFloat($('floor').value),
 		depth: parseFloat($('depth').value), pedH: parseFloat($('ped').value), rimH: parseFloat($('rim').value),
-		rimW: 2.0, label: $('labelInput').value.replace(/["\\]/g, ''), pocketHOverride: 0   // case kept as typed; quotes/backslashes dropped for the SCAD string
+		rimW: 2.0, label: $('labelInput').value.replace(/["\\]/g, '')   // case kept as typed; quotes/backslashes dropped for the SCAD string
 	};
 	F.pocket(s, p);
 	p.pocketW = +(p.pkgW + p.tol).toFixed(2);
-	p.pocketH = +((p.pocketHOverride || p.pkgH) + p.tol).toFixed(2);
+	p.pocketH = +(p.pkgH + p.tol).toFixed(2);
 	p.fixed = $('fixedOn').checked; p.clamped = false;
 	if (p.fixed) {
 		p.outerW = Math.max(40, parseFloat($('fixedW').value) || 170);
@@ -509,12 +519,13 @@ function buildTray(p) {
 	var zA = Math.min(p.recessH, p.floor);
 	if (zA > 0) g.add(extrude(floorHoles(inset()), 0, zA, matGrey));
 	if (p.floor > zA) g.add(extrude(floorHoles(full()), zA, p.floor - zA, matGrey));
+	if (!p.fits) { withPockets = function (shape) { return shape; }; }   // nothing fits: draw the plain slab, the warning says why
 	// 2. wall layer: same rule, minus the pockets (the recess may reach above the floor when it sits under the wall)
 	var zB = Math.max(p.floor, Math.min(p.recessH, p.bodyH));
 	if (zB > p.floor) g.add(extrude(withPockets(inset()), p.floor, zB - p.floor, matGrey));
 	if (p.bodyH > zB) g.add(extrude(withPockets(full()), zB, p.bodyH - zB, matGrey));
 	// 3. family-specific supports
-	if (p.pedH > 0) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
+	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
 	if (p.rimH > 0) {
 		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
@@ -555,7 +566,7 @@ function rebuild() {
 	if (p.fam === 'pga') { $('pedSizeV').textContent = p.pedSize + ' mm'; $('ledgeV').textContent = p.ledge.toFixed(2) + ' mm'; }
 	if (p.fam === 'qfp') { $('insetV').textContent = p.inset.toFixed(2) + ' mm'; }
 	if (p.fam !== 'dip') { $('holeDV').textContent = p.holeD + ' mm' + (p.holeD < parseFloat($('holeD').value) ? ' (max for support)' : ''); }
-	if (p.fam === 'dip') { $('perRowV').textContent = p.perRow; $('chipGapV').textContent = p.chipGap.toFixed(2) + ' mm'; $('railWV').textContent = p.railW.toFixed(1) + ' mm'; }
+	if (p.fam === 'dip') { $('perRowV').textContent = p.perRowClamped ? p.perRow + ' (set ' + $('perRow').value + ', limited by format)' : p.perRow; $('chipGapV').textContent = p.chipGap.toFixed(2) + ' mm'; $('railWV').textContent = p.railW.toFixed(1) + ' mm'; }
 	if (p.fam === 'dip') {
 		$('tPkg').textContent = s.span + ' × ' + s.len + ' mm per chip · ' + s.rowSp + ' mm row spacing';
 		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm channel (' + p.perRow + ' chips)';
@@ -569,8 +580,8 @@ function rebuild() {
 	$('tSrc').textContent = s.src;
 	var warn = [];
 	if (p.fixed && p.clamped) warn.push('That many pockets do not fit the ' + p.outerW + ' × ' + p.outerH + ' format, reduced to ' + p.rows + ' × ' + p.cols + '.');
-	if (p.fixed && !p.fits) warn.push('The format is smaller than one pocket plus walls.');
-	if (p.rimH > 0 && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
+	if (p.fixed && !p.fits) warn.push('Even one pocket (' + p.pocketW + ' × ' + p.pocketH + ' mm) plus walls does not fit the ' + p.outerW + ' × ' + p.outerH + ' format — nothing is cut. Enlarge the format' + (p.fam === 'dip' ? ', reduce chips per channel or rotate the channels' : '') + '.');
+	if (p.rimH > 0 && p.fits && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
 	if (p.rimH > 0 && p.rimH + 0.3 > p.bodyH - 1) warn.push('Rim too high for this tray: recess limited to ' + p.recessH.toFixed(1) + ' mm.');
 	F.warnings(p, s, warn);
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
@@ -702,11 +713,11 @@ function exportStl() {
 
 // ===========================================================================
 ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall', 'floor', 'depth', 'ped',
- 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'rim', 'hole', 'holeD', 'labelInput'].forEach(function (id) {
+ 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD', 'labelInput'].forEach(function (id) {
 	$(id).addEventListener('input', function () {
 		if (id === 'sock') applyPackageDefaults();
 		rebuild();
-		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
+		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
 	});
 });
 applyPackageDefaults(); rebuild(); setView('iso'); animate();
