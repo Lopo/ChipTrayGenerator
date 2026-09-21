@@ -595,6 +595,11 @@ function rebuild() {
 
 function fitMax() {
 	var p = params(); if (!p.fixed) return;
+	if (p.fam === 'dip') {   // fill the channel axis first: as many chips per channel as the format allows
+		var s = p.sock, avail = (p.dipHoriz ? p.outerW : p.outerH) - 2 * p.wall - p.tol;
+		var maxChips = Math.max(1, Math.floor((avail + p.chipGap) / (s.len + p.chipGap)));
+		$('perRow').max = Math.max(12, maxChips); $('perRow').value = maxChips; p = params();
+	}
 	$('rows').max = Math.max(12, Math.min(40, p.maxRows)); $('cols').max = Math.max(12, Math.min(40, p.maxCols));
 	$('rows').value = Math.min(40, p.maxRows); $('cols').value = Math.min(40, p.maxCols); rebuild(); setView(viewMode);
 }
