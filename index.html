@@ -25,6 +25,9 @@
 	select:focus, input:focus { border-color: #f97316; outline: none; }
 	input:disabled, select:disabled { opacity: .4; cursor: not-allowed; }
 	.dim { opacity: .4; }
+	/* The label field is outlined in the colour the raised label is drawn and exported in. */
+	#labelInput { border-color: #14b8a6; }
+	#labelInput:focus { border-color: #2dd4bf; }
 	input[type=range] { width: 100%; accent-color: #f97316; }
 	.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #d1d5db; }
 	.check input { accent-color: #f97316; width: 16px; height: 16px; flex: none; }
@@ -175,9 +178,9 @@
 		</div>
 		<div class="row">
 			<div class="field"><label for="labelStyle">Label style</label>
-				<select id="labelStyle" title="Raised: real geometry, exported in STL/SCAD and as its own 3MF part with its own material, so a second filament can print it.&#10;Engraved: cut by the OpenSCAD export; the preview only marks where it lands.">
+				<select id="labelStyle" title="Raised: real geometry, exported in STL/SCAD and as its own 3MF part with its own material, so a second filament can print it.&#10;Engraved: cut into the front wall as real geometry, so it comes out in the STL and 3MF too.">
 					<option value="raised" selected>Raised (own 3MF part)</option>
-					<option value="engraved">Engraved (SCAD only)</option>
+					<option value="engraved">Engraved (cut into the wall)</option>
 					<option value="none">No label</option>
 				</select>
 			</div>
@@ -287,7 +290,11 @@ var PACKAGES = [
 ];
 var PLA_DENSITY = 1.24; // g/cm3
 var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
-var CHAMFER_STEPS = 4;  // slices used to approximate the 45° nesting chamfer in the preview/STL
+var CHAMFER_STEPS = 4;   // slices used to approximate the 45° nesting chamfer in the preview/STL
+// Slices used for the funnel at the bottom of the push-out hole. Each one carries the whole floor outline
+// and a copy of every hole, which on a 280-chip DIP plate is not cheap, so keep the count small and
+// tessellate the funnel's circles more coarsely than the bore — any seam is inside the hole anyway.
+var HOLE_STEPS = 2, HOLE_SEG = 12;
 
 var $ = function (id) { return document.getElementById(id); };
 var sockEl = $('sock');
@@ -304,8 +311,8 @@ function currentPkg() { var id = sockEl.value; for (var i = 0; i < PACKAGES.leng
 function rect(x, y, w, h) { var s = new THREE.Shape(); s.moveTo(x, y); s.lineTo(x + w, y); s.lineTo(x + w, y + h); s.lineTo(x, y + h); s.closePath(); return s; }
 function rectPath(x, y, w, h) { var s = new THREE.Path(); s.moveTo(x, y); s.lineTo(x + w, y); s.lineTo(x + w, y + h); s.lineTo(x, y + h); s.closePath(); return s; }
 function circlePath(cx, cy, d) { var hp = new THREE.Path(); hp.absarc(cx, cy, d / 2, 0, Math.PI * 2, true); return hp; }
-function extrude(shape, z0, dz, mat) {
-	var g = new THREE.ExtrudeGeometry(shape, { depth: dz, bevelEnabled: false, curveSegments: 24 });
+function extrude(shape, z0, dz, mat, seg) {
+	var g = new THREE.ExtrudeGeometry(shape, { depth: dz, bevelEnabled: false, curveSegments: seg || 24 });
 	var m = new THREE.Mesh(g, mat); m.position.z = z0; return m;
 }
 
@@ -549,6 +556,11 @@ function params() {
 	p.labelBand = p.bodyH - p.insetTop;
 	p.labelSize = Math.min(5, Math.max(1.2, p.labelBand * 0.85));
 	p.labelZ = p.insetTop + p.labelBand / 2;
+	p.labelDepth = Math.max(0.3, Math.min(0.8, p.wall / 3));   // never cut more than a third of the outer wall
+	// The push-out hole is funnelled on the underside, the end you actually poke: it opens out by holeCham
+	// at 45 deg, so there is no sharp rim to catch a finger and the hole is easier to find blind. The other
+	// end sits inside the support the chip rests on, where a chamfer would only eat into that support.
+	p.holeCham = p.hole ? Math.max(0, Math.min(1.0, p.holeD / 6, p.floor / 3)) : 0;
 	p.labelStyle = $('labelStyle').value;
 	p.holeList = F.holes(p);
 	// Finger notches: the wall between two horizontally adjacent pockets is slotted from the top down to the
@@ -593,44 +605,106 @@ try {
 var matGrey = ok3d && new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.05 });
 var matOrange = ok3d && new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.5, metalness: 0.05 });
 var matSup = ok3d && new THREE.MeshStandardMaterial({ color: 0x8b9bb4, roughness: 0.7, metalness: 0.05 }); // supports: lighter so they stand out
-var matLabel = ok3d && new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.9 });
 // A raised label is exported as its own 3MF part with its own material, so show it in that material's colour.
 var matLabelRaised = ok3d && new THREE.MeshStandardMaterial({ color: LABEL_COLOR, roughness: 0.6, metalness: 0.05 });
-var labelFont = null;   // loaded asynchronously; the label is preview-only (the SCAD export engraves it for real)
+var labelFont = null;   // loaded asynchronously; both label styles are real geometry once it has arrived
 if (ok3d) new THREE.FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/fonts/helvetiker_regular.typeface.json',
 	function (f) { labelFont = f; rebuild(); }, undefined, function () { labelFont = null; });
+// Both label styles are scaled the same way: to the band of front wall left above the underside chamfer,
+// and to the tray width so a long name cannot run off the end.
+function labelScale(p, w, h) {
+	var maxW = Math.max(1, p.outerW - 2 * Math.max(p.wall, 2) - 2);
+	return Math.min(1, p.labelBand * 0.92 / Math.max(1e-6, h), maxW / Math.max(1e-6, w));
+}
+function shapeFromPoints(pts, Ctor) {
+	var s = new (Ctor || THREE.Shape)();
+	s.moveTo(pts[0].x, pts[0].y);
+	for (var i = 1; i < pts.length; i++) s.lineTo(pts[i].x, pts[i].y);
+	s.closePath();
+	return s;
+}
+
+// An engraved label without any CSG: the front wall is left open over the label patch (see outerAt() and
+// notchSlice() in buildTray) and a plate shaped "patch minus glyphs" is put back into the gap. The counters
+// of letters like O, A and R are islands in that plate — they rest on the wall behind them, so they are
+// emitted as their own small solids, the same way the notched slice is drawn as strips.
+function engravePlan(p) {
+	if (!labelFont || !p.label || p.labelStyle !== 'engraved' || !(p.labelBand > 0.5)) return null;
+	var shapes;
+	try { shapes = labelFont.generateShapes(p.label, 5); } catch (e) { return null; }
+	if (!shapes || !shapes.length) return null;
+	var polys = [], minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+	shapes.forEach(function (sh) {
+		var outer = sh.getPoints(12);
+		if (outer.length < 3) return;
+		outer.forEach(function (q) {
+			minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x);
+			minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+		});
+		polys.push({ outer: outer, holes: (sh.holes || []).map(function (h) { return h.getPoints(12); }).filter(function (h) { return h.length >= 3; }) });
+	});
+	if (!polys.length || maxX <= minX) return null;
+	var k = labelScale(p, maxX - minX, maxY - minY);
+	var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+	function xf(q) { return { x: (q.x - cx) * k, y: (q.y - cy) * k }; }
+	var gw = (maxX - minX) * k, gh = (maxY - minY) * k;
+	var pad = Math.max(0.2, Math.min(1.0, (p.labelBand - gh) / 2 - 0.1));
+	var hw = gw / 2 + pad, hh = gh / 2 + pad;
+	var d = p.labelDepth;
+	var plate = rect(-hw, -hh, 2 * hw, 2 * hh), counters = [];
+	polys.forEach(function (pl) {
+		plate.holes.push(shapeFromPoints(pl.outer.map(xf), THREE.Path));
+		pl.holes.forEach(function (h) { counters.push(shapeFromPoints(h.map(xf), THREE.Shape)); });
+	});
+	return { d: d, plate: plate, counters: counters,
+		x0: p.outerW / 2 - hw, x1: p.outerW / 2 + hw,
+		z0: p.labelZ - hh, z1: p.labelZ + hh };
+}
+
 function labelMesh(p) {
-	if (!labelFont || !p.label || p.labelStyle === 'none') return null;
-	var raised = p.labelStyle === 'raised';
-	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: p.labelSize, height: raised ? 0.8 : 0.3, curveSegments: 6 });
+	if (!labelFont || !p.label || p.labelStyle !== 'raised') return null;   // engraved is built by engravePlan()
+	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: p.labelSize, height: 0.8, curveSegments: 6 });
 	geo.computeBoundingBox(); var bb = geo.boundingBox;
 	// Descenders and parentheses make the real height vary with the text, so fit the glyphs to the band that
 	// is actually left above the chamfer rather than trusting the nominal size.
-	var k = Math.min(1, p.labelBand * 0.92 / Math.max(1e-6, bb.max.y - bb.min.y));
+	var k = labelScale(p, bb.max.x - bb.min.x, bb.max.y - bb.min.y);
 	if (k < 1) { geo.scale(k, k, 1); geo.computeBoundingBox(); bb = geo.boundingBox; }
 	geo.translate(-(bb.max.x + bb.min.x) / 2, -(bb.max.y + bb.min.y) / 2, 0);
-	var m = new THREE.Mesh(geo, raised ? matLabelRaised : matLabel);
+	var m = new THREE.Mesh(geo, matLabelRaised);
 	m.rotation.x = Math.PI / 2;                          // text in the XZ plane, extruded towards -Y (out of the front wall)
-	// raised: starts 0.05 mm inside the wall and stands 0.75 mm proud — real geometry, exported.
-	// engraved: only a dark marker so you can see where it lands; the cut itself is done by OpenSCAD.
-	m.position.set(p.outerW / 2, raised ? 0.05 : 0.25, p.labelZ);   // above the chamfer — see params()
-	m.userData.previewOnly = !raised;
+	// starts 0.05 mm inside the wall and stands 0.75 mm proud; sits above the chamfer — see params()
+	m.position.set(p.outerW / 2, 0.05, p.labelZ);
+	m.userData.previewOnly = false;
 	m.userData.isLabel = true;
 	return m;
 }
 
 function buildTray(p) {
 	var g = new THREE.Group(), F = FAMILIES[p.fam];
-	function floorHoles(shape) {
+	var eng = engravePlan(p);
+	// True while this slice is inside the label patch, so the front wall must be left open there. Only ever
+	// at full width (w = 0): the label is always placed above the underside chamfer.
+	function cutFront(w, z0, z1) {
+		return !!eng && w < 1e-6 && z1 > eng.z0 + 1e-9 && z0 < eng.z1 - 1e-9;
+	}
+	// Outer contour of a slice: a plain rectangle, or one with a notch bitten out of the front edge.
+	function outerAt(w, z0, z1) {
+		var X1 = p.outerW - w, Y1 = p.outerH - w;
+		if (!cutFront(w, z0, z1)) return rect(w, w, X1 - w, Y1 - w);
+		var sh = new THREE.Shape();
+		sh.moveTo(0, 0); sh.lineTo(eng.x0, 0); sh.lineTo(eng.x0, eng.d); sh.lineTo(eng.x1, eng.d);
+		sh.lineTo(eng.x1, 0); sh.lineTo(X1, 0); sh.lineTo(X1, Y1); sh.lineTo(0, Y1); sh.closePath();
+		return sh;
+	}
+	function floorHoles(shape, z0) {
 		if (!p.holeList.length) return shape;
+		var grow = 2 * Math.max(0, p.holeCham - z0);   // widest at the very bottom, back to size at holeCham
 		for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
 			var o = pocketOrigin(p, r, c);
-			p.holeList.forEach(function (h) { shape.holes.push(circlePath(o.x + h.x, o.y + h.y, h.d)); });
+			p.holeList.forEach(function (h) { shape.holes.push(circlePath(o.x + h.x, o.y + h.y, h.d + grow)); });
 		}
 		return shape;
 	}
-	function full() { return rect(0, 0, p.outerW, p.outerH); }
-	function insetBy(w) { return w > 0.001 ? rect(w, w, p.outerW - 2 * w, p.outerH - 2 * w) : full(); }
 	function withPockets(shape) {
 		if (!p.fits) return shape;   // nothing fits: plain slab, the warning says why
 		for (var r = 0; r < p.rows; r++) for (var c = 0; c < p.cols; c++) {
@@ -655,7 +729,11 @@ function buildTray(p) {
 		function frame(x, y, ww, hh) { if (ww > 0.01 && hh > 0.01) g.add(extrude(rect(x, y, ww, hh), z0, dz, matGrey)); }
 		frame(w, w, mx - w, Y1 - w);                       // left border
 		frame(p.outerW - mx, w, X1 - (p.outerW - mx), Y1 - w);  // right
-		frame(w, w, X1 - w, my - w);                       // bottom
+		if (cutFront(w, z0, z0 + dz)) {                    // front border, opened up for the engraving
+			frame(0, 0, eng.x0, eng.d);
+			frame(eng.x1, 0, X1 - eng.x1, eng.d);
+			frame(0, eng.d, X1, my - eng.d);
+		} else frame(w, w, X1 - w, my - w);                // front border
 		frame(w, p.outerH - my, X1 - w, Y1 - (p.outerH - my));  // top
 		var c, r, cuts;
 		for (c = 0; c + 1 < p.cols; c++) {                 // walls between columns, cut at each row's mid height
@@ -675,6 +753,8 @@ function buildTray(p) {
 	// overhangs the one below by a fraction of a millimetre.
 	var bounds = [0, p.floor];
 	if (p.notchD > 0) bounds.push(p.bodyH - p.notchD);
+	if (eng) bounds.push(eng.z0, eng.z1);
+	if (p.holeCham > 0) for (var hi = 1; hi <= HOLE_STEPS; hi++) bounds.push(p.holeCham * hi / HOLE_STEPS);
 	if (p.recessH > 0) {
 		bounds.push(p.recessH);
 		if (p.flareH > 0) for (var i = 1; i <= CHAMFER_STEPS; i++) bounds.push(p.recessH + p.flareH * i / CHAMFER_STEPS);
@@ -687,7 +767,8 @@ function buildTray(p) {
 		if (z1 - z0 < 1e-6) continue;
 		var w = insetAt(p, z0);
 		if (p.notchD > 0 && p.fits && z0 >= p.bodyH - p.notchD - 1e-9) notchSlice(w, z0, z1 - z0);
-		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(insetBy(w)) : floorHoles(insetBy(w)), z0, z1 - z0, matGrey));
+		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(outerAt(w, z0, z1)) : floorHoles(outerAt(w, z0, z1), z0),
+			z0, z1 - z0, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
 	}
 	// 3. family-specific supports
 	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
@@ -695,6 +776,16 @@ function buildTray(p) {
 	if (p.rimH > 0) {
 		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
 		g.add(extrude(rim, p.bodyH, p.rimH, matOrange));
+	}
+	if (eng) {
+		var place = function (shape) {
+			var m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: eng.d, bevelEnabled: false, curveSegments: 12 }), matGrey);
+			m.rotation.x = Math.PI / 2;                       // shape lies in XZ, extrudes towards -Y into the gap
+			m.position.set(p.outerW / 2, eng.d, p.labelZ);
+			g.add(m);
+		};
+		place(eng.plate);
+		eng.counters.forEach(place);
 	}
 	var lm = labelMesh(p); if (lm) g.add(lm);
 	g.position.set(-p.outerW / 2, -p.outerH / 2, 0);
@@ -706,7 +797,13 @@ function volumeMm3(p) {
 	var ring = p.outerW * p.outerH - (p.outerW - 2 * p.recessW) * (p.outerH - 2 * p.recessW);
 	if (p.recessH > 0) v -= ring * p.recessH;
 	if (p.flareH > 0) v -= ring * p.flareH / 2;   // the flare removes roughly half the prism over its height
-	p.holeList.forEach(function (h) { v -= p.rows * p.cols * Math.PI * h.d * h.d / 4 * p.floor; });
+	p.holeList.forEach(function (h) {
+		v -= p.rows * p.cols * Math.PI * h.d * h.d / 4 * p.floor;
+		if (p.holeCham > 0) {   // the funnel takes roughly half the ring between mouth and bore
+			var D = h.d + 2 * p.holeCham;
+			v -= p.rows * p.cols * Math.PI * (D * D - h.d * h.d) / 4 * p.holeCham / 2;
+		}
+	});
 	if (p.notchR > 0) v -= (p.notchX ? p.rows * (p.cols - 1) : 0) * p.wall * 2 * p.notchR * p.notchD
 		+ (p.notchY ? p.cols * (p.rows - 1) : 0) * p.wall * 2 * p.notchR * p.notchD;
 	v += (p.outerW * p.outerH - p.rows * p.cols * p.pocketW * p.pocketH) * p.depth;
@@ -783,9 +880,22 @@ function fitMax() {
 	$('rows').max = Math.max(12, Math.min(40, p.maxRows)); $('cols').max = Math.max(12, Math.min(40, p.maxCols));
 	$('rows').value = Math.min(40, p.maxRows); $('cols').value = Math.min(40, p.maxCols); rebuild(); setView(viewMode);
 }
+// The label is remembered per package. One outline covers several sockets and CPU families — LGA775 and
+// LGA771, AM2 through AM3+ and FM1/FM2, PGA168 from the 486 to a 5x86 — so the tool cannot guess a sensible
+// default text. What it can do is hand back whatever was typed for that package last time.
+var LABEL_STORE = 'chipTrayGenerator.labels';
+function loadLabels() {
+	try { return JSON.parse(localStorage.getItem(LABEL_STORE)) || {}; } catch (e) { return {}; }
+}
+function saveLabel(id, text) {
+	try { var m = loadLabels(); m[id] = text; localStorage.setItem(LABEL_STORE, JSON.stringify(m)); } catch (e) { }
+}
 var lastFam = null;
 function applyPackageDefaults() {
 	var s = currentPkg(); FAMILIES[s.fam].defaults(s, s.fam !== lastFam); lastFam = s.fam;
+	// Only override the field when something was stored, so typing and then switching does not lose it.
+	var kept = loadLabels()[s.id];
+	if (typeof kept === 'string') $('labelInput').value = kept;
 }
 
 // Distance at which the tray's bounding box just fills the panel. A fixed multiple of the tray size used to
@@ -861,6 +971,7 @@ function exportScad() {
 	L.push('depth = ' + p.depth + ';     // pocket depth');
 	L.push('sup_h = ' + p.pedH + ';      // support height (pedestal / ledge / pad / rail)');
 	L.push('hole_pos = [' + p.holeList.map(function (h) { return '[' + h.x.toFixed(2) + ', ' + h.y.toFixed(2) + ']'; }).join(', ') + '];  // push-out holes, pocket-local');
+	L.push('hole_cham = ' + p.holeCham.toFixed(2) + ';   // 45 deg funnel at the underside mouth of each hole');
 	L.push('notch_r = ' + p.notchR.toFixed(2) + ';   // half the finger-notch slot length, 0 = no notches');
 	L.push('notch_d = ' + p.notchD.toFixed(2) + ';   // notch depth measured down from the wall top');
 	L.push('rim_h = ' + p.rimH + ';      // stacking rim height, 0 = no stacking');
@@ -870,7 +981,7 @@ function exportScad() {
 	L.push('label_font = "Liberation Sans";  // OpenSCAD default; the preview uses a similar sans font');
 	L.push('label_size = ' + p.labelSize.toFixed(2) + ';');
 	L.push('label_z = ' + p.labelZ.toFixed(2) + ';   // centred above the underside chamfer, which has no front face');
-	L.push('label_depth = 0.8;');
+	L.push('label_depth = ' + p.labelDepth.toFixed(2) + ';');
 	L.push('label_raised = ' + (p.labelStyle === 'raised' ? 1 : 0) + ';   // 1 = standing proud (same as the STL), 0 = engraved');
 	L.push('');
 	L.push('outer_w = outer_fixed ? outer_w_fixed : cols * pocket_w + (cols + 1) * wall;');
@@ -928,7 +1039,10 @@ function exportScad() {
 	L.push('');
 	L.push('difference() {');
 	L.push('  tray();');
-	L.push('  if (hole_d > 0) pocket_pos() for (hp = hole_pos) translate([hp[0], hp[1], -1]) cylinder(d = hole_d, h = floor_t + 2);');
+	L.push('  if (hole_d > 0) pocket_pos() for (hp = hole_pos) translate([hp[0], hp[1], 0]) {');
+	L.push('    translate([0, 0, -1]) cylinder(d = hole_d, h = floor_t + 2);');
+	L.push('    if (hole_cham > 0) translate([0, 0, -0.01]) cylinder(d1 = hole_d + 2*hole_cham, d2 = hole_d, h = hole_cham);');
+	L.push('  }');
 	L.push('}');
 	download(fileBase(p) + '.scad', L.join('\n'), 'text/plain');
 }
@@ -1066,6 +1180,7 @@ function exportStl() {
  'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD', 'notch', 'recessStyle', 'labelInput', 'labelStyle'].forEach(function (id) {
 	$(id).addEventListener('input', function () {
 		if (id === 'sock') applyPackageDefaults();
+		if (id === 'labelInput') saveLabel(currentPkg().id, $('labelInput').value);
 		rebuild();
 		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
 	});
