@@ -12,7 +12,7 @@ No build, no server; three.js is loaded from a CDN for the preview.
 
 - Pick a package, set rows × columns, walls, floor, pocket depth and print tolerance.
 - Live WebGL preview (rotate / zoom / pan, isometric, top and bottom views).
-- **OpenSCAD export** (`.scad`, fully parametric, exact geometry, engraved label) and a quick **STL export** straight from the preview.
+- **OpenSCAD export** (`.scad`, fully parametric, exact geometry) plus **STL** and **3MF** straight from the preview. 3MF carries its unit, so it can never be imported at the wrong scale, and is several times smaller than the STL (welded vertices + deflate; written without any library).
 - **Stacking:** every tray has a 2 mm rim on top and a matching recess underneath, so trays nest.
   Tray heights may differ; only the outer size must match. Turn on **Fixed outer format** to give trays for different
   packages the same footprint — pockets are centred and the leftover goes into the outer wall. "Max pockets that fit"
@@ -36,8 +36,9 @@ Package sizes and pin-free centres are taken from manufacturer datasheets, not g
 
 | Package | Source |
 |---|---|
-| PGA132 (386DX) | Intel 386DX datasheet 231630 (14×14 @ 2.54 mm, 3 rows, 1.36") |
-| PGA168 (486) | Intel packaging databook (1.75", 44.19–45.21 mm) |
+| PGA68 (287/387) | 11×11 @ 2.54 mm; Kyocera C-PGA 27.94 sq, MIL-STD-1835 CMGA3-P68C 28.96–29.97 mm |
+| PGA132 (386DX) | Intel 386DX datasheet 231630, Fig. 8.1: 1.450 in = 36.802 mm square, 14×14 @ 2.54 mm, 3 rows |
+| PGA168 (486) | Intel packaging databook, 1.75 in = 44.19–45.21 mm |
 | SPGA296/321 (Socket 5/7) | Intel Pentium datasheet 241997 Tab. 19; Intel AP-579 Socket 7 pin-side view; AMD K6-2 datasheet 21850 Tab. 73 / Fig. 113 |
 | PPGA / FC-PGA 370 | Intel Pentium III PGA370 datasheet 245264 Tab. 35 / Fig. 23, 31 |
 | Socket A 462 | AMD Athlon XP Model 8 datasheet 25175 Tab. 21 / Fig. 14, 17 |
@@ -51,11 +52,14 @@ at 0.3 mm or less there, as the tool tells you.
 
 ## Printing notes
 
-- Default tolerance is +0.5 mm per pocket; measure one printed pocket and adjust.
+- Pocket sizes take the **largest** published package dimension, so every specimen fits; the tolerance is added on top. Default is +0.5 mm per pocket; measure one printed pocket and adjust.
+- Every pocket has a push-out hole (one per chip in a DIP channel) so a single chip can be lifted out of a full tray.
+- The nesting step under the outer edge is a 45° chamfer, so the tray prints without support.
 - Supports are 4 mm high for PGA (pin length is 3.05–3.30 mm), 1.5 mm for QFP/PLCC, 4 mm for DIP.
 - The OpenSCAD export is a clean manifold. The STL from the preview is a union of touching solids, which slicers
   accept, but use the SCAD output when you want to edit anything.
-- Nothing here has been verified on a printed tray for every package yet — if you print one, please report back.
+- The label can be **raised** (exported in both STL and SCAD) or **engraved** (OpenSCAD export only, because the STL comes straight from the preview and is not a CSG result).
+- Verified on printed trays so far: PGA168 (486) 5×3 on a Bambu Lab. If you print another one, please report the measured pocket width, whether the chip clears the floor, and whether two trays nest.
 
 ## License
 
