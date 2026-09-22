@@ -54,7 +54,10 @@ at 0.3 mm or less there, as the tool tells you.
 
 - Pocket sizes take the **largest** published package dimension, so every specimen fits; the tolerance is added on top. Default is +0.5 mm per pocket; measure one printed pocket and adjust.
 - Every pocket has a push-out hole (one per chip in a DIP channel) so a single chip can be lifted out of a full tray.
-- The nesting step under the outer edge is a 45° chamfer, so the tray prints without support.
+- Optional **finger notches**: the walls between pockets are slotted from the top down to the level the chip rests on, on both axes, so a chip can also be picked out sideways.
+- The 3MF carries the raised label as a **second object with its own material**, so a dual-colour printer can put it on another extruder. A single filament prints the same part.
+- The underside is stepped in by `rim_w + tol/2` over the bottom `rim_h + 0.3` mm — that is the part that drops inside the rim of the tray below. Going back to full width leaves a 90° ledge, which you can either keep (**square step**, print it with support) or have chamfered away over the next few millimetres (**45° chamfer**, the default, prints without support). Both nest identically: the chamfer sits above the rim, so it never touches it.
+- The label sits on the part of the front wall that is at full width, above the underside step, and is shrunk to fit if that band is short. The tool warns when the outer wall gets thin where it meets the floor — raising the floor to the top of the chamfer removes the thinning completely.
 - Supports are 4 mm high for PGA (pin length is 3.05–3.30 mm), 1.5 mm for QFP/PLCC, 4 mm for DIP.
 - The OpenSCAD export is a clean manifold. The STL from the preview is a union of touching solids, which slicers
   accept, but use the SCAD output when you want to edit anything.

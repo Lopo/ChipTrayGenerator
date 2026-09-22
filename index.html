@@ -12,8 +12,7 @@
 	* { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 	body { background: #0b0c10; color: #f8fafc; margin: 0; padding: 24px 16px; display: flex; justify-content: center; }
 	.wrapper { max-width: 1180px; width: 100%; background: #14151a; border-radius: 16px; border: 1px solid #22252c;
-		padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.8); display: grid; grid-template-columns: 1fr 1.25fr; gap: 28px; }
-	@media (max-width: 900px) { .wrapper { grid-template-columns: 1fr; } }
+		padding: 28px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.8); display: grid; grid-template-columns: 1fr; gap: 28px; }
 	h1 { grid-column: 1 / -1; margin: 0; font-size: 24px; color: #f97316; text-align: center; font-weight: 700; letter-spacing: -.02em; }
 	p.subtitle { grid-column: 1 / -1; margin: 0 0 8px; color: #6b7280; text-align: center; font-size: 13px; }
 	.form-panel { display: flex; flex-direction: column; gap: 14px; }
@@ -24,6 +23,8 @@
 	select, input[type=text], input[type=number] { width: 100%; padding: 10px 12px; background: #07080a; border: 1px solid #2e333d;
 		border-radius: 8px; color: #f8fafc; font-size: 14px; }
 	select:focus, input:focus { border-color: #f97316; outline: none; }
+	input:disabled, select:disabled { opacity: .4; cursor: not-allowed; }
+	.dim { opacity: .4; }
 	input[type=range] { width: 100%; accent-color: #f97316; }
 	.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #d1d5db; }
 	.check input { accent-color: #f97316; width: 16px; height: 16px; flex: none; }
@@ -41,8 +42,8 @@
 	.btn.secondary { background: #1f2937; box-shadow: none; }
 	.btn.secondary:hover { background: #374151; }
 	/* The canvas is absolutely positioned so its own size never feeds back into the layout (Firefox grew the panel every frame). */
-	.preview-panel { background: #07080a; border-radius: 12px; border: 1px solid #22252c; min-height: 620px; position: relative; overflow: hidden; } /* grid stretches it to the form column's height */
-	@media (max-width: 900px) { .preview-panel { min-height: 480px; height: 480px; } }
+	.preview-panel { background: #07080a; border-radius: 12px; border: 1px solid #22252c; overflow: hidden;
+		position: relative; height: 520px; }
 	.view-label { position: absolute; bottom: 100px; left: 14px; font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; z-index: 10; pointer-events: none; }
 	.view-btns { position: absolute; top: 8px; right: 10px; z-index: 10; display: flex; gap: 6px; }
 	.view-btns button { background: #1f2937; color: #e5e7eb; border: 1px solid #2e333d; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
@@ -55,6 +56,34 @@
 	.stats .v { font-size: 15px; color: #f8fafc; font-weight: 600; margin-top: 2px; }
 	#err { grid-column: 1 / -1; color: #fca5a5; background: #2a1215; border: 1px solid #7f1d1d; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
 	footer { grid-column: 1 / -1; color: #4b5563; font-size: 11px; text-align: center; line-height: 1.6; }
+	.doc-note { color: #4b5563; font-size: 11px; line-height: 1.6; border-top: 1px solid #1f2329; padding-top: 12px; }
+	/* Narrow: the three stat columns wrap to several lines and would collide with the hint above them. */
+	@media (max-width: 700px) { .view-label { display: none; } .stats div { padding: 8px 4px; } .stats .v { font-size: 13px; } }
+
+	/* Wide screens: one full-height app layout instead of a scrolling page. The control column keeps a fixed,
+	   readable width and scrolls on its own; everything left over goes to the preview, which therefore stays
+	   fully visible however far down the controls you are. Named areas keep the placement deterministic even
+	   though #err is display:none most of the time and would otherwise shift the rows. */
+	@media (min-width: 1101px) {
+		body { padding: 16px; height: 100vh; overflow: hidden; }
+		h1 { font-size: 21px; }
+		p.subtitle { font-size: 12px; }
+		/* No width cap: on a UHD panel a centred 2400 px box left broad empty margins. The control column
+		   grows a little with the window so it does not look like a sliver next to a 3000 px preview. */
+		.wrapper { height: 100%; max-width: none; grid-template-columns: clamp(480px, 24vw, 760px) minmax(0, 1fr);
+			grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+			grid-template-areas: "head head" "sub sub" "err err" "form view" "foot foot"; gap: 20px 28px; }
+		h1 { grid-area: head; }
+		p.subtitle { grid-area: sub; margin-bottom: 0; }
+		#err { grid-area: err; }
+		.form-panel { grid-area: form; overflow-y: auto; min-height: 0; padding-right: 12px;
+			scrollbar-width: thin; scrollbar-color: #2e333d transparent; }
+		.form-panel::-webkit-scrollbar { width: 10px; }
+		.form-panel::-webkit-scrollbar-thumb { background: #2e333d; border-radius: 5px; }
+		.form-panel::-webkit-scrollbar-track { background: transparent; }
+		.preview-panel { grid-area: view; height: 100%; min-height: 0; }
+		footer { grid-area: foot; }
+	}
 </style>
 </head>
 <body>
@@ -84,7 +113,7 @@
 			<div class="check"><input type="checkbox" id="fixedOn"><label for="fixedOn">Fixed outer format (one size for every package, so trays stack across families)</label></div>
 			<div class="row" style="gap:8px">
 				<div class="field"><label>Width <span class="val">mm</span></label><input type="number" id="fixedW" value="170" step="1" min="40" max="400"></div>
-				<div class="field"><label>Length <span class="val">mm</span></label><input type="number" id="fixedH" value="120" step="1" min="40" max="400"></div>
+				<div class="field"><label>Length <span class="val">mm</span></label><input type="number" id="fixedH" value="130" step="1" min="40" max="400"></div>
 			</div>
 		</div>
 		<div class="row" id="fixedRow" style="display:none">
@@ -123,9 +152,22 @@
 			<div class="field"><label for="railW">Centre rail width <span class="val" id="railWV">12.6 mm</span></label><input type="range" id="railW" min="2" max="24" step="0.2" value="12.6"></div>
 			<div class="check"><input type="checkbox" id="dipHoriz"><label for="dipHoriz">Channels along the width (rotate 90°)</label></div>
 		</div>
+		<div class="row" data-fam="pga qfp">
+			<div class="check"><input type="checkbox" id="notch" checked><label for="notch">Finger notches — slot the wall between pockets down to the chip so it can be picked out sideways</label></div>
+			<div></div>
+		</div>
 		<div class="row">
 			<div class="field"><label for="rim">Stacking rim height <span class="val" id="rimV">2.0 mm</span></label><input type="range" id="rim" min="0" max="5" step="0.5" value="2"></div>
+			<div class="field"><label for="recessStyle">Nesting recess underside</label>
+				<select id="recessStyle" title="45° chamfer: the underside step is sloped, so the tray prints without support.&#10;Square step: nests with no slack, but the ledge needs support in the slicer.">
+					<option value="chamfer" selected>45° chamfer (no support)</option>
+					<option value="step">Square step (needs support)</option>
+				</select>
+			</div>
+		</div>
+		<div class="row">
 			<div class="check"><input type="checkbox" id="spin"><label for="spin">Auto-rotate preview</label></div>
+			<div></div>
 		</div>
 		<div class="field">
 			<label for="labelInput">4. Label on the front wall</label>
@@ -133,9 +175,9 @@
 		</div>
 		<div class="row">
 			<div class="field"><label for="labelStyle">Label style</label>
-				<select id="labelStyle">
-					<option value="raised" selected>Raised — exported in STL and SCAD</option>
-					<option value="engraved">Engraved — OpenSCAD export only</option>
+				<select id="labelStyle" title="Raised: real geometry, exported in STL/SCAD and as its own 3MF part with its own material, so a second filament can print it.&#10;Engraved: cut by the OpenSCAD export; the preview only marks where it lands.">
+					<option value="raised" selected>Raised (own 3MF part)</option>
+					<option value="engraved">Engraved (SCAD only)</option>
 					<option value="none">No label</option>
 				</select>
 			</div>
@@ -160,6 +202,10 @@
 			<button class="btn secondary" onclick="exportStl()">⬇ STL</button>
 			<button class="btn secondary" onclick="exportThreeMF()">⬇ 3MF</button>
 		</div>
+		<div class="doc-note">Trays nest by a top rim and a matching bottom recess; heights may differ between trays, only the outer format must match.
+			PGA packages rest on a central pedestal inside the pin-free centre, or on an edge ledge / hollow pedestal where the underside carries capacitors.
+			QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube.
+			Every pocket has a push-out hole so one chip can be lifted out of a full tray, and the nesting step can be chamfered so nothing needs support or left square if you would rather add support in the slicer. Dimensions come from the datasheets and JEDEC outlines listed per package.</div>
 	</div>
 
 	<div class="preview-panel">
@@ -178,10 +224,6 @@
 	</div>
 
 	<footer>
-		Trays nest by a top rim and a matching bottom recess; heights may differ between trays, only the outer format must match.
-		PGA packages rest on a central pedestal inside the pin-free centre, or on an edge ledge / hollow pedestal where the underside carries capacitors.
-		QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube.
-		Every pocket has a push-out hole so one chip can be lifted out of a full tray, and the nesting step is chamfered so nothing needs support. Dimensions come from the datasheets and JEDEC outlines listed per package.<br>
 		<span style="color:#6b7280">Chip Tray Generator · © 2026 Pavol "Lopo" Hluchý · MIT license ·
 		<a href="https://github.com/Lopo/ChipTrayGenerator" style="color:#f97316;text-decoration:none">github.com/Lopo/ChipTrayGenerator</a> · preview by three.js</span>
 	</footer>
@@ -244,6 +286,7 @@ var PACKAGES = [
 	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.5, rowSp: 22.86, rail: 20.2, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
 ];
 var PLA_DENSITY = 1.24; // g/cm3
+var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
 var CHAMFER_STEPS = 4;  // slices used to approximate the 45° nesting chamfer in the preview/STL
 
 var $ = function (id) { return document.getElementById(id); };
@@ -472,7 +515,7 @@ function params() {
 	p.fixed = $('fixedOn').checked; p.clamped = false;
 	if (p.fixed) {
 		p.outerW = Math.max(40, parseFloat($('fixedW').value) || 170);
-		p.outerH = Math.max(40, parseFloat($('fixedH').value) || 120);
+		p.outerH = Math.max(40, parseFloat($('fixedH').value) || 130);
 		p.maxCols = Math.max(1, Math.floor((p.outerW - p.wall) / (p.pocketW + p.wall)));
 		p.maxRows = Math.max(1, Math.floor((p.outerH - p.wall) / (p.pocketH + p.wall)));
 		if (p.cols > p.maxCols) { p.cols = p.maxCols; p.clamped = true; }
@@ -492,9 +535,37 @@ function params() {
 	p.recessH = p.rimH > 0 ? Math.min(p.rimH + 0.3, p.bodyH - 1) : 0;
 	p.recessW = p.rimH > 0 ? p.rimW + p.tol / 2 : 0;
 	p.recessOK = p.recessW <= Math.min(p.marginX, p.marginY) + 1e-6;
+	p.recessChamfer = $('recessStyle').value === 'chamfer';
+	// The recess itself (0 .. recessH) must stay a straight inset of recessW, because that is the part that
+	// drops inside the rim of the tray below. The 90 deg ledge it leaves is chamfered away in a separate flare
+	// zone ABOVE it, where there is nothing to collide with - the rim of the tray below ends at rimH < recessH.
+	p.flareH = p.recessChamfer && p.recessH > 0 ? Math.max(0, Math.min(p.recessW, p.bodyH - p.recessH - 0.4)) : 0;
+	p.insetTop = p.recessH + p.flareH;          // above this the body is at full width all round
+	// The outer wall stands on the inset base, so between the floor and insetTop it is thinner than the
+	// margin. Thinnest right at the floor, where the inset is still at or near its maximum.
+	p.wallBase = Math.min(p.marginX, p.marginY) - insetAt(p, p.floor);
+	// The label is cut into / raised off the front face, which only exists at full width above insetTop —
+	// below that it would hang in the air in front of the chamfer.
+	p.labelBand = p.bodyH - p.insetTop;
+	p.labelSize = Math.min(5, Math.max(1.2, p.labelBand * 0.85));
+	p.labelZ = p.insetTop + p.labelBand / 2;
 	p.labelStyle = $('labelStyle').value;
 	p.holeList = F.holes(p);
+	// Finger notches: the wall between two horizontally adjacent pockets is slotted from the top down to the
+	// level the chip rests on, so it can be pinched from the side instead of only pushed up through the hole.
+	// Optional, and everything else is derived — slot length from the pocket, depth from the support height.
+	p.notch = $('notch').checked && p.fam !== 'dip' && p.fits && (p.cols > 1 || p.rows > 1);
+	p.notchX = p.notch && p.cols > 1;   // slots in the walls between columns
+	p.notchY = p.notch && p.rows > 1;   // and between rows, so edge pockets are reachable too
+	p.notchR = p.notch ? Math.max(3, Math.min(8, Math.min(p.pocketW, p.pocketH) / 3)) : 0;   // half the slot length
+	p.notchD = p.notch ? Math.max(2, Math.min(p.depth, p.depth - p.pedH)) : 0;               // down from the wall top
 	return p;
+}
+// How far the body outline is pulled in at height z: the straight nesting inset, then the flare back out.
+function insetAt(p, z) {
+	if (!(p.recessH > 0) || z >= p.recessH + p.flareH - 1e-9) return 0;
+	if (z < p.recessH - 1e-9) return p.recessW;
+	return p.recessW * (1 - (z - p.recessH) / p.flareH);
 }
 function pocketOrigin(p, r, c) { return { x: p.marginX + c * (p.pocketW + p.wall), y: p.marginY + r * (p.pocketH + p.wall) }; }
 
@@ -523,21 +594,28 @@ var matGrey = ok3d && new THREE.MeshStandardMaterial({ color: 0x334155, roughnes
 var matOrange = ok3d && new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.5, metalness: 0.05 });
 var matSup = ok3d && new THREE.MeshStandardMaterial({ color: 0x8b9bb4, roughness: 0.7, metalness: 0.05 }); // supports: lighter so they stand out
 var matLabel = ok3d && new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.9 });
+// A raised label is exported as its own 3MF part with its own material, so show it in that material's colour.
+var matLabelRaised = ok3d && new THREE.MeshStandardMaterial({ color: LABEL_COLOR, roughness: 0.6, metalness: 0.05 });
 var labelFont = null;   // loaded asynchronously; the label is preview-only (the SCAD export engraves it for real)
 if (ok3d) new THREE.FontLoader().load('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/fonts/helvetiker_regular.typeface.json',
 	function (f) { labelFont = f; rebuild(); }, undefined, function () { labelFont = null; });
 function labelMesh(p) {
 	if (!labelFont || !p.label || p.labelStyle === 'none') return null;
 	var raised = p.labelStyle === 'raised';
-	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: 5, height: raised ? 0.8 : 0.3, curveSegments: 6 });
+	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: p.labelSize, height: raised ? 0.8 : 0.3, curveSegments: 6 });
 	geo.computeBoundingBox(); var bb = geo.boundingBox;
+	// Descenders and parentheses make the real height vary with the text, so fit the glyphs to the band that
+	// is actually left above the chamfer rather than trusting the nominal size.
+	var k = Math.min(1, p.labelBand * 0.92 / Math.max(1e-6, bb.max.y - bb.min.y));
+	if (k < 1) { geo.scale(k, k, 1); geo.computeBoundingBox(); bb = geo.boundingBox; }
 	geo.translate(-(bb.max.x + bb.min.x) / 2, -(bb.max.y + bb.min.y) / 2, 0);
-	var m = new THREE.Mesh(geo, raised ? matGrey : matLabel);
+	var m = new THREE.Mesh(geo, raised ? matLabelRaised : matLabel);
 	m.rotation.x = Math.PI / 2;                          // text in the XZ plane, extruded towards -Y (out of the front wall)
 	// raised: starts 0.05 mm inside the wall and stands 0.75 mm proud — real geometry, exported.
 	// engraved: only a dark marker so you can see where it lands; the cut itself is done by OpenSCAD.
-	m.position.set(p.outerW / 2, raised ? 0.05 : 0.25, p.bodyH / 2);
+	m.position.set(p.outerW / 2, raised ? 0.05 : 0.25, p.labelZ);   // above the chamfer — see params()
 	m.userData.previewOnly = !raised;
+	m.userData.isLabel = true;
 	return m;
 }
 
@@ -560,18 +638,56 @@ function buildTray(p) {
 		}
 		return shape;
 	}
-	// Body. The nesting recess is a 45° chamfer built from CHAMFER_STEPS slices, so the outline only grows
-	// upwards and the tray prints without support; a square step would leave an unsupported ledge.
+	// The notched slice is drawn as plain strips instead of an outline with holes. Slots on both axes leave a
+	// small cross of material between every four pockets that is an island at this height (it rests on the
+	// solid wall below), and an island cannot be expressed as a hole inside a hole — strips have no such limit.
+	function addBars(z0, dz, fixed, thick, from, to, cuts, vertical) {
+		cuts.sort(function (a, b) { return a[0] - b[0]; });
+		var at = from;
+		cuts.concat([[to, to]]).forEach(function (cut) {
+			var end = Math.min(cut[0], to);
+			if (end - at > 0.01) g.add(extrude(vertical ? rect(fixed, at, thick, end - at) : rect(at, fixed, end - at, thick), z0, dz, matGrey));
+			at = Math.max(at, cut[1]);
+		});
+	}
+	function notchSlice(w, z0, dz) {
+		var mx = p.marginX, my = p.marginY, R = p.notchR, X1 = p.outerW - w, Y1 = p.outerH - w;
+		function frame(x, y, ww, hh) { if (ww > 0.01 && hh > 0.01) g.add(extrude(rect(x, y, ww, hh), z0, dz, matGrey)); }
+		frame(w, w, mx - w, Y1 - w);                       // left border
+		frame(p.outerW - mx, w, X1 - (p.outerW - mx), Y1 - w);  // right
+		frame(w, w, X1 - w, my - w);                       // bottom
+		frame(w, p.outerH - my, X1 - w, Y1 - (p.outerH - my));  // top
+		var c, r, cuts;
+		for (c = 0; c + 1 < p.cols; c++) {                 // walls between columns, cut at each row's mid height
+			cuts = [];
+			if (p.notchX) for (r = 0; r < p.rows; r++) { var cy = pocketOrigin(p, r, 0).y + p.pocketH / 2; cuts.push([cy - R, cy + R]); }
+			addBars(z0, dz, pocketOrigin(p, 0, c).x + p.pocketW, p.wall, my, p.outerH - my, cuts, true);
+		}
+		for (r = 0; r + 1 < p.rows; r++) {                 // walls between rows, cut at each column's mid width
+			cuts = [];
+			if (p.notchY) for (c = 0; c < p.cols; c++) { var cx = pocketOrigin(p, 0, c).x + p.pocketW / 2; cuts.push([cx - R, cx + R]); }
+			addBars(z0, dz, pocketOrigin(p, r, 0).y + p.pocketH, p.wall, mx, p.outerW - mx, cuts, false);
+		}
+	}
+	// Body. Below recessH the outline is inset by recessW - that is the part that nests inside the rim below.
+	// Above it the outline returns to full size: as a single step (a 90 deg ledge the slicer must bridge or
+	// support) or, with the chamfer option, as a flare approximated by CHAMFER_STEPS slices so each layer only
+	// overhangs the one below by a fraction of a millimetre.
 	var bounds = [0, p.floor];
-	if (p.recessH > 0) for (var i = 1; i <= CHAMFER_STEPS; i++) bounds.push(p.recessH * i / CHAMFER_STEPS);
+	if (p.notchD > 0) bounds.push(p.bodyH - p.notchD);
+	if (p.recessH > 0) {
+		bounds.push(p.recessH);
+		if (p.flareH > 0) for (var i = 1; i <= CHAMFER_STEPS; i++) bounds.push(p.recessH + p.flareH * i / CHAMFER_STEPS);
+	}
 	bounds = bounds.filter(function (v) { return v > -1e-9 && v < p.bodyH - 1e-9; });
 	bounds.push(p.bodyH);
 	bounds.sort(function (a, b) { return a - b; });
 	for (var i = 0; i + 1 < bounds.length; i++) {
 		var z0 = bounds[i], z1 = bounds[i + 1];
 		if (z1 - z0 < 1e-6) continue;
-		var w = (p.recessH > 0 && z0 < p.recessH - 1e-9) ? p.recessW * (1 - z0 / p.recessH) : 0;
-		g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(insetBy(w)) : floorHoles(insetBy(w)), z0, z1 - z0, matGrey));
+		var w = insetAt(p, z0);
+		if (p.notchD > 0 && p.fits && z0 >= p.bodyH - p.notchD - 1e-9) notchSlice(w, z0, z1 - z0);
+		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(insetBy(w)) : floorHoles(insetBy(w)), z0, z1 - z0, matGrey));
 	}
 	// 3. family-specific supports
 	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
@@ -587,8 +703,12 @@ function buildTray(p) {
 
 function volumeMm3(p) {
 	var v = p.outerW * p.outerH * p.floor;
-	if (p.recessH > 0) v -= (p.outerW * p.outerH - (p.outerW - 2 * p.recessW) * (p.outerH - 2 * p.recessW)) * p.recessH;
+	var ring = p.outerW * p.outerH - (p.outerW - 2 * p.recessW) * (p.outerH - 2 * p.recessW);
+	if (p.recessH > 0) v -= ring * p.recessH;
+	if (p.flareH > 0) v -= ring * p.flareH / 2;   // the flare removes roughly half the prism over its height
 	p.holeList.forEach(function (h) { v -= p.rows * p.cols * Math.PI * h.d * h.d / 4 * p.floor; });
+	if (p.notchR > 0) v -= (p.notchX ? p.rows * (p.cols - 1) : 0) * p.wall * 2 * p.notchR * p.notchD
+		+ (p.notchY ? p.cols * (p.rows - 1) : 0) * p.wall * 2 * p.notchR * p.notchD;
 	v += (p.outerW * p.outerH - p.rows * p.cols * p.pocketW * p.pocketH) * p.depth;
 	if (p.pedH > 0) v += p.rows * p.cols * FAMILIES[p.fam].area(p) * p.pedH;
 	if (p.rimH > 0) v += (p.outerW * p.outerH - (p.outerW - 2 * p.rimW) * (p.outerH - 2 * p.rimW)) * p.rimH;
@@ -605,7 +725,12 @@ function rebuild() {
 	});
 	$('fixedRow').style.display = p.fixed ? 'grid' : 'none';
 	if (p.fixed) {
-		$('fixedInfo').innerHTML = 'Fits max. <strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets · outer margin ' + p.marginX.toFixed(1) + ' / ' + p.marginY.toFixed(1) + ' mm';
+		// Wall value that makes the outer margin equal to the gap between pockets, per axis — the leftover
+		// otherwise all ends up in the outer margin. Shown as a number so it stays one slider, not another option.
+		var evenX = (p.outerW - p.cols * p.pocketW) / (p.cols + 1), evenY = (p.outerH - p.rows * p.pocketH) / (p.rows + 1);
+		$('fixedInfo').innerHTML = 'Fits max. <strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets · outer margin '
+			+ p.marginX.toFixed(1) + ' / ' + p.marginY.toFixed(1) + ' mm<br>even spacing at wall '
+			+ evenX.toFixed(1) + ' mm across, ' + evenY.toFixed(1) + ' mm down';
 		if (p.clamped) { $('rows').value = p.rows; $('cols').value = p.cols; }
 	}
 	$('rowsV').textContent = p.rows; $('colsV').textContent = p.cols;
@@ -623,6 +748,8 @@ function rebuild() {
 		$('tPkg').textContent = p.pkgW + ' × ' + p.pkgH + ' mm' + (s.pins ? ' · ' + s.pins + ' pins' : '') + (s.body ? ' lead span · body ' + s.body + ' × ' + s.bodyH : '');
 		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm';
 	}
+	$('labelInput').disabled = p.labelStyle === 'none';
+	$('labelInput').parentNode.classList.toggle('dim', p.labelStyle === 'none');
 	var tr = F.table(p, s); $('tSupK').textContent = tr[0]; $('tSup').textContent = tr[1];
 	$('tOuter').textContent = p.outerW.toFixed(1) + ' × ' + p.outerH.toFixed(1) + ' mm';
 	$('tH').textContent = p.totalH.toFixed(1) + ' mm';
@@ -632,6 +759,10 @@ function rebuild() {
 	if (p.fixed && !p.fits) warn.push('Even one pocket (' + p.pocketW + ' × ' + p.pocketH + ' mm) plus walls does not fit the ' + p.outerW + ' × ' + p.outerH + ' format — nothing is cut. Enlarge the format' + (p.fam === 'dip' ? ', reduce chips per channel or rotate the channels' : '') + '.');
 	if (p.rimH > 0 && p.fits && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
 	if (p.rimH > 0 && p.rimH + 0.3 > p.bodyH - 1) warn.push('Rim too high for this tray: recess limited to ' + p.recessH.toFixed(1) + ' mm.');
+	if (p.rimH > 0 && !p.recessChamfer) warn.push('Square nesting step: the ' + p.recessW.toFixed(2) + ' mm ledge around the underside overhangs by 90°. Print with support (or let the slicer bridge it) — the chamfer option avoids that, and nests exactly the same.');
+	if (p.rimH > 0 && p.fits && p.wallBase < 0.8) warn.push('Outer wall is only ' + p.wallBase.toFixed(2) + ' mm thick where it meets the floor, because the underside is inset by ' + p.recessW.toFixed(2) + ' mm there. Widen the wall to ≥ ' + (p.recessW + 0.8).toFixed(2) + ' mm' + (p.flareH > 0 ? ', or raise the floor to ' + p.insetTop.toFixed(1) + ' mm so the chamfer stays inside the solid floor' : '') + '.');
+	if (p.labelStyle !== 'none' && p.label && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of front wall sits at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' recess') + ', so the label is shrunk to fit. Deepen the pockets, raise the floor' + (p.flareH > 0 ? ', or use the square step' : '') + ' for a readable label.');
+	if (p.rimH > 0 && p.recessChamfer && p.flareH < p.recessW - 1e-6) warn.push('Body too shallow for a full chamfer: the flare above the recess is only ' + p.flareH.toFixed(2) + ' mm instead of ' + p.recessW.toFixed(2) + ' mm, so it is steeper than 45°. Increase the pocket depth or the floor.');
 	F.warnings(p, s, warn);
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
 	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
@@ -657,16 +788,37 @@ function applyPackageDefaults() {
 	var s = currentPkg(); FAMILIES[s.fam].defaults(s, s.fam !== lastFam); lastFam = s.fam;
 }
 
+// Distance at which the tray's bounding box just fills the panel. A fixed multiple of the tray size used to
+// do, but the preview is now as wide as the window allows, and a bounding-sphere fit is far too loose for a
+// flat tray seen from an angle: project the eight box corners onto the two screen axes and fit those.
+function fitDistance(dir, target, p) {
+	var up = Math.abs(dir.z) > 0.99 ? new THREE.Vector3(0, 1, 0) : camera.up;
+	var right = new THREE.Vector3().crossVectors(dir, up).normalize();
+	var vert = new THREE.Vector3().crossVectors(right, dir).normalize();
+	var maxR = 0, maxV = 0, maxD = 0, v = new THREE.Vector3();
+	for (var i = 0; i < 8; i++) {
+		v.set((i & 1 ? 0.5 : -0.5) * p.outerW, (i & 2 ? 0.5 : -0.5) * p.outerH, (i & 4 ? p.totalH : 0)).sub(target);
+		maxR = Math.max(maxR, Math.abs(v.dot(right)));
+		maxV = Math.max(maxV, Math.abs(v.dot(vert)));
+		maxD = Math.max(maxD, v.dot(dir));
+	}
+	var tanV = Math.tan(camera.fov * Math.PI / 360), tanH = tanV * (camera.aspect || 1);
+	return 1.12 * Math.max(maxV / tanV, maxR / tanH) + maxD;
+}
+
 var viewMode = 'iso';
 function setView(mode) {
 	viewMode = mode; ['vIso', 'vTop', 'vBottom'].forEach(function (id) { $(id).classList.remove('active'); });
 	$(mode === 'iso' ? 'vIso' : mode === 'top' ? 'vTop' : 'vBottom').classList.add('active');
 	if (!ok3d) return;
-	var p = lastP || params(); var d = Math.max(p.outerW, p.outerH) * 1.6 + 40;
-	if (mode === 'iso') camera.position.set(d * 0.7, -d * 0.7, d * 0.55);
-	else if (mode === 'top') camera.position.set(0, -0.001, d);
-	else camera.position.set(0, -0.001, -d);
-	controls.target.set(0, 0, p.totalH / 2); controls.update();
+	resize();                                   // the aspect must be current before the distance is computed
+	var p = lastP || params();
+	var dir = mode === 'iso' ? new THREE.Vector3(0.7, -0.7, 0.55)
+		: new THREE.Vector3(0, -0.001, mode === 'top' ? 1 : -1);
+	dir.normalize();
+	var target = new THREE.Vector3(0, 0, p.totalH / 2);
+	camera.position.copy(dir).multiplyScalar(fitDistance(dir, target, p)).add(target);
+	controls.target.copy(target); controls.update();
 }
 var panelEl = document.querySelector('.preview-panel');
 function resize() {
@@ -709,12 +861,15 @@ function exportScad() {
 	L.push('depth = ' + p.depth + ';     // pocket depth');
 	L.push('sup_h = ' + p.pedH + ';      // support height (pedestal / ledge / pad / rail)');
 	L.push('hole_pos = [' + p.holeList.map(function (h) { return '[' + h.x.toFixed(2) + ', ' + h.y.toFixed(2) + ']'; }).join(', ') + '];  // push-out holes, pocket-local');
+	L.push('notch_r = ' + p.notchR.toFixed(2) + ';   // half the finger-notch slot length, 0 = no notches');
+	L.push('notch_d = ' + p.notchD.toFixed(2) + ';   // notch depth measured down from the wall top');
 	L.push('rim_h = ' + p.rimH + ';      // stacking rim height, 0 = no stacking');
 	L.push('rim_w = ' + p.rimW + ';');
 	L.push('tol = ' + p.tol + ';');
 	L.push('label = "' + p.label + '";');
 	L.push('label_font = "Liberation Sans";  // OpenSCAD default; the preview uses a similar sans font');
-	L.push('label_size = 5;');
+	L.push('label_size = ' + p.labelSize.toFixed(2) + ';');
+	L.push('label_z = ' + p.labelZ.toFixed(2) + ';   // centred above the underside chamfer, which has no front face');
 	L.push('label_depth = 0.8;');
 	L.push('label_raised = ' + (p.labelStyle === 'raised' ? 1 : 0) + ';   // 1 = standing proud (same as the STL), 0 = engraved');
 	L.push('');
@@ -725,24 +880,28 @@ function exportScad() {
 	L.push('body_h = floor_t + depth;');
 	L.push('recess_h = rim_h > 0 ? rim_h + 0.3 : 0;');
 	L.push('recess_w = rim_h > 0 ? rim_w + tol / 2 : 0;');
+	L.push('flare_h = ' + p.flareH.toFixed(2) + ';   // 45\u00b0 chamfer above the recess; 0 = square step, needs support');
 	L.push('');
 	L.push('module pocket_pos() { for (r = [0:rows-1], c = [0:cols-1]) translate([margin_x + c*(pocket_w+wall), margin_y + r*(pocket_h+wall), 0]) children(); }');
 	L.push('');
 	L.push('// ---- family-specific support inside each pocket (origin = pocket corner at floor level) ----');
 	FAMILIES[p.fam].scad(p, L);
 	L.push('');
-	L.push('// 45° chamfer instead of a square step under the outer edge, so the tray prints without support');
+	L.push('// The bottom recess_h of the body is inset by recess_w: that is the part that drops inside the rim');
+	L.push('// of the tray below. Returning to full width leaves a 90\u00b0 ledge; flare_h > 0 chamfers it away');
+	L.push('// above the rim, so the tray prints without support and still nests the same.');
 	L.push('module body() {');
 	L.push('  if (recess_h > 0) {');
-	L.push('    hull() {');
-	L.push('      translate([recess_w, recess_w, 0]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, 0.01]);');
-	L.push('      translate([0, 0, recess_h - 0.01]) cube([outer_w, outer_h, 0.01]);');
+	L.push('    translate([recess_w, recess_w, 0]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, recess_h]);');
+	L.push('    if (flare_h > 0) hull() {');
+	L.push('      translate([recess_w, recess_w, recess_h]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, 0.01]);');
+	L.push('      translate([0, 0, recess_h + flare_h - 0.01]) cube([outer_w, outer_h, 0.01]);');
 	L.push('    }');
-	L.push('    translate([0, 0, recess_h]) cube([outer_w, outer_h, body_h - recess_h]);');
+	L.push('    translate([0, 0, recess_h + flare_h]) cube([outer_w, outer_h, body_h - recess_h - flare_h]);');
 	L.push('  } else cube([outer_w, outer_h, body_h]);');
 	L.push('}');
 	L.push('');
-	L.push('module label_at(depth_off) { translate([outer_w/2, depth_off, body_h/2]) rotate([90, 0, 0]) linear_extrude(height = label_depth) text(label, size = label_size, font = label_font, halign = "center", valign = "center"); }');
+	L.push('module label_at(depth_off) { translate([outer_w/2, depth_off, label_z]) rotate([90, 0, 0]) linear_extrude(height = label_depth) text(label, size = label_size, font = label_font, halign = "center", valign = "center"); }');
 	L.push('');
 	L.push('module tray() {');
 	L.push('  difference() {');
@@ -756,6 +915,13 @@ function exportScad() {
 	L.push('    }');
 	L.push('    pocket_pos() translate([0, 0, floor_t]) cube([pocket_w, pocket_h, depth + rim_h + 1]);');
 	L.push('    if (len(label) > 0 && !label_raised) label_at(label_depth);');
+	L.push('    // finger notches: slot the wall between horizontally adjacent pockets');
+	L.push('    if (notch_r > 0 && cols > 1) for (r = [0:rows-1], c = [0:cols-2])');
+	L.push('      translate([margin_x + c*(pocket_w+wall) + pocket_w, margin_y + r*(pocket_h+wall) + pocket_h/2 - notch_r, body_h - notch_d])');
+	L.push('        cube([wall, 2*notch_r, notch_d + rim_h + 1]);');
+	L.push('    if (notch_r > 0 && rows > 1) for (r = [0:rows-2], c = [0:cols-1])');
+	L.push('      translate([margin_x + c*(pocket_w+wall) + pocket_w/2 - notch_r, margin_y + r*(pocket_h+wall) + pocket_h, body_h - notch_d])');
+	L.push('        cube([2*notch_r, wall, notch_d + rim_h + 1]);');
 	L.push('  }');
 	L.push('  if (sup_h > 0) pocket_pos() translate([0, 0, floor_t]) support();');
 	L.push('}');
@@ -816,11 +982,12 @@ function deflateRaw(data) {
 	} catch (e) { return Promise.resolve(null); }
 }
 // Collect world-space geometry, weld duplicate vertices and shift the model so it sits at the origin.
-function meshData(group) {
+function meshData(group, wantLabel) {
 	group.updateMatrixWorld(true);
 	var verts = [], tris = [], map = Object.create(null), v = new THREE.Vector3();
 	group.traverse(function (o) {
 		if (!o.isMesh || o.userData.previewOnly) return;
+		if (!!o.userData.isLabel !== !!wantLabel) return;
 		var pos = o.geometry.attributes.position, idx = o.geometry.index, ids = new Array(pos.count);
 		for (var i = 0; i < pos.count; i++) {
 			v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
@@ -835,26 +1002,45 @@ function meshData(group) {
 			if (a !== b2 && b2 !== c && a !== c) tris.push([a, b2, c]);   // drop triangles that welding made degenerate
 		}
 	});
-	var mn = [Infinity, Infinity, Infinity];
-	verts.forEach(function (p) { for (var k = 0; k < 3; k++) if (p[k] < mn[k]) mn[k] = p[k]; });
-	verts.forEach(function (p) { for (var k = 0; k < 3; k++) p[k] -= mn[k]; });
 	return { verts: verts, tris: tris };
 }
 function exportThreeMF() {
 	if (!ok3d) { alert('The preview is not running and the 3MF is built from it. Use the OpenSCAD export.'); return; }
 	var p = params(), g = buildTray(p);
 	g.position.set(0, 0, 0);
-	var md = meshData(g);
+	// Body and raised label are two meshes with their own base material, wrapped by a third object that
+	// references both as <components>. That is what makes a slicer load them as ONE object with two parts
+	// — the dual-colour arrangement — instead of two loose objects it has to ask about. One filament
+	// prints exactly the same thing, so this costs nothing when dual colour is not wanted.
+	var body = meshData(g, false), lab = meshData(g, true);
+	var all = body.verts.concat(lab.verts), mn = [Infinity, Infinity, Infinity];
+	all.forEach(function (q) { for (var k = 0; k < 3; k++) if (q[k] < mn[k]) mn[k] = q[k]; });
+	all.forEach(function (q) { for (var k = 0; k < 3; k++) q[k] -= mn[k]; });
 	var x = ['<?xml version="1.0" encoding="UTF-8"?>',
 		'<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
 		'<metadata name="Application">Chip Tray Generator</metadata>',
 		'<metadata name="Title">' + fileBase(p) + '</metadata>',
 		'<metadata name="Description">' + p.sock.name.replace(/[<>&]/g, ' ') + '</metadata>',
-		'<resources><object id="1" type="model"><mesh><vertices>'];
-	md.verts.forEach(function (q) { x.push('<vertex x="' + q[0].toFixed(3) + '" y="' + q[1].toFixed(3) + '" z="' + q[2].toFixed(3) + '"/>'); });
-	x.push('</vertices><triangles>');
-	md.tris.forEach(function (t) { x.push('<triangle v1="' + t[0] + '" v2="' + t[1] + '" v3="' + t[2] + '"/>'); });
-	x.push('</triangles></mesh></object></resources><build><item objectid="1"/></build></model>');
+		'<resources>',
+		'<basematerials id="2"><base name="Tray" displaycolor="#3F4F63FF"/><base name="Label" displaycolor="' + LABEL_COLOR_HEX + 'FF"/></basematerials>'];
+	function emit(id, md, pindex) {
+		if (!md.tris.length) return false;
+		x.push('<object id="' + id + '" type="model" pid="2" pindex="' + pindex + '"><mesh><vertices>');
+		md.verts.forEach(function (q) { x.push('<vertex x="' + q[0].toFixed(3) + '" y="' + q[1].toFixed(3) + '" z="' + q[2].toFixed(3) + '"/>'); });
+		x.push('</vertices><triangles>');
+		md.tris.forEach(function (t) { x.push('<triangle v1="' + t[0] + '" v2="' + t[1] + '" v3="' + t[2] + '"/>'); });
+		x.push('</triangles></mesh></object>');
+		return true;
+	}
+	var comps = [];
+	if (emit(1, body, 0)) comps.push('<component objectid="1"/>');
+	if (emit(3, lab, 1)) comps.push('<component objectid="3"/>');
+	var buildId = 1;
+	if (comps.length > 1) {
+		buildId = 5;
+		x.push('<object id="5" type="model"><components>' + comps.join('') + '</components></object>');
+	}
+	x.push('</resources><build><item objectid="' + buildId + '"/></build></model>');
 	var enc = new TextEncoder();
 	var parts = [
 		{ name: '[Content_Types].xml', data: enc.encode('<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>') },
@@ -877,7 +1063,7 @@ function exportStl() {
 
 // ===========================================================================
 ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall', 'floor', 'depth', 'ped',
- 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD', 'labelInput', 'labelStyle'].forEach(function (id) {
+ 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD', 'notch', 'recessStyle', 'labelInput', 'labelStyle'].forEach(function (id) {
 	$(id).addEventListener('input', function () {
 		if (id === 'sock') applyPackageDefaults();
 		rebuild();
