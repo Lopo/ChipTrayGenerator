@@ -59,9 +59,11 @@ at 0.3 mm or less there, as the tool tells you.
 - The underside is stepped in by `rim_w + tol/2` over the bottom `rim_h + 0.3` mm — that is the part that drops inside the rim of the tray below. Going back to full width leaves a 90° ledge, which you can either keep (**square step**, print it with support) or have chamfered away over the next few millimetres (**45° chamfer**, the default, prints without support). Both nest identically: the chamfer sits above the rim, so it never touches it.
 - The label sits on the part of the front wall that is at full width, above the underside step, and is shrunk to fit if that band is short. It is **remembered per package** in the browser, because one outline covers several sockets and CPU families (LGA775 and LGA771, AM2 through AM3+ and FM, PGA168 from the 486 to a 5x86) so no default text could be right — but what you typed last time can come back. The tool warns when the outer wall gets thin where it meets the floor — raising the floor to the top of the chamfer removes the thinning completely.
 - Supports are 4 mm high for PGA (pin length is 3.05–3.30 mm), 1.5 mm for QFP/PLCC, 4 mm for DIP.
-- The OpenSCAD export is a clean manifold. The STL from the preview is a union of touching solids, which slicers
-  accept, but use the SCAD output when you want to edit anything.
-- The label can be **raised** (exported in both STL and SCAD) or **engraved** (OpenSCAD export only, because the STL comes straight from the preview and is not a CSG result).
+- The OpenSCAD export is a clean manifold. The STL and 3MF are a union of overlapping solids, which slicers
+  accept, but use the SCAD output when you want to edit anything. Every exported surface is closed: the build
+  is checked so that no edge belongs to an odd number of triangles, over every package, format and option.
+  Shapes carrying several holes are avoided for that reason — three.js bridges them in a way that leaves the
+  cap open, which showed up in Bambu Studio as push-out holes that did not go through.
 - Verified on printed trays so far: PGA168 (486) 5×3 on a Bambu Lab. If you print another one, please report the measured pocket width, whether the chip clears the floor, and whether two trays nest.
 
 ## License

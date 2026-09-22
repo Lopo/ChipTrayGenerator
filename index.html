@@ -650,13 +650,48 @@ function engravePlan(p) {
 	var gw = (maxX - minX) * k, gh = (maxY - minY) * k;
 	var pad = Math.max(0.2, Math.min(1.0, (p.labelBand - gh) / 2 - 0.1));
 	var hw = gw / 2 + pad, hh = gh / 2 + pad;
-	var d = p.labelDepth;
-	var plate = rect(-hw, -hh, 2 * hw, 2 * hh), counters = [];
+	// The plate is cut into vertical strips, one glyph per strip. A single shape carrying every glyph as a
+	// hole triangulates with bridge edges that are traversed only once, which leaves the cap open — the same
+	// fault that used to seal the push-out holes. Glyphs that overlap horizontally (kerned pairs) share a
+	// strip; plates() reports how many such strips exist so the tests can catch it if it ever happens.
+	polys = polys.map(function (pl) {
+		var o = pl.outer.map(xf), x0 = 1e9, x1 = -1e9;
+		o.forEach(function (q) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); });
+		return { outer: o, holes: pl.holes.map(function (h) { return h.map(xf); }), x0: x0, x1: x1 };
+	}).sort(function (a, b) { return a.x0 - b.x0; });
+	var groups = [], counters = [];
 	polys.forEach(function (pl) {
-		plate.holes.push(shapeFromPoints(pl.outer.map(xf), THREE.Path));
-		pl.holes.forEach(function (h) { counters.push(shapeFromPoints(h.map(xf), THREE.Shape)); });
+		var g = groups[groups.length - 1];
+		if (g && pl.x0 < g.x1 - 1e-6) { g.items.push(pl); g.x1 = Math.max(g.x1, pl.x1); }
+		else groups.push({ x0: pl.x0, x1: pl.x1, items: [pl] });
+		pl.holes.forEach(function (h) { counters.push(shapeFromPoints(h, THREE.Shape)); });
 	});
-	return { d: d, plate: plate, counters: counters,
+	var plates = [], cutAt = -hw, crowded = 0;
+	groups.forEach(function (gr, i) {
+		var right = i + 1 < groups.length ? (gr.x1 + groups[i + 1].x0) / 2 : hw;
+		// A strip can still hold more than one contour — the dot and the stem of an i, the two dots of a
+		// semicolon. Those do not overlap vertically, so cut the strip again across.
+		var bands = [], bottom = -hh;
+		gr.items.map(function (pl) {
+			var y0 = 1e9, y1 = -1e9;
+			pl.outer.forEach(function (q) { y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); });
+			return { pl: pl, y0: y0, y1: y1 };
+		}).sort(function (a, b) { return a.y0 - b.y0; }).forEach(function (it) {
+			var last = bands[bands.length - 1];
+			if (last && it.y0 < last.y1 - 1e-6) { last.items.push(it.pl); last.y1 = Math.max(last.y1, it.y1); }
+			else bands.push({ y0: it.y0, y1: it.y1, items: [it.pl] });
+		});
+		bands.forEach(function (bd, j) {
+			var top = j + 1 < bands.length ? (bd.y1 + bands[j + 1].y0) / 2 : hh;
+			var strip = rect(cutAt, bottom, right - cutAt, top - bottom);
+			bd.items.forEach(function (pl) { strip.holes.push(shapeFromPoints(pl.outer, THREE.Path)); });
+			if (bd.items.length > 1) crowded++;
+			plates.push(strip);
+			bottom = top;
+		});
+		cutAt = right;
+	});
+	return { d: p.labelDepth, plates: plates, counters: counters, crowded: crowded,
 		x0: p.outerW / 2 - hw, x1: p.outerW / 2 + hw,
 		z0: p.labelZ - hh, z1: p.labelZ + hh };
 }
@@ -712,9 +747,12 @@ function buildTray(p) {
 		}
 		return shape;
 	}
-	// The notched slice is drawn as plain strips instead of an outline with holes. Slots on both axes leave a
-	// small cross of material between every four pockets that is an island at this height (it rests on the
-	// solid wall below), and an island cannot be expressed as a hole inside a hole — strips have no such limit.
+	// Every slice that contains pockets is drawn as plain strips rather than as an outline with the pockets as
+	// holes. Two reasons. One: slots on both axes leave a small cross of material between every four pockets
+	// that is an island at that height, and an island cannot be expressed as a hole inside a hole. Two, and
+	// this is the one that bit a user — three.js triangulates a shape carrying several rectangular holes with
+	// bridge edges that end up traversed only once, so the cap is not closed. Bambu Studio's repair then
+	// sealed the push-out holes of the inner pockets. Strips carry no holes at all, so neither problem exists.
 	function addBars(z0, dz, fixed, thick, from, to, cuts, vertical) {
 		cuts.sort(function (a, b) { return a[0] - b[0]; });
 		var at = from;
@@ -724,7 +762,7 @@ function buildTray(p) {
 			at = Math.max(at, cut[1]);
 		});
 	}
-	function notchSlice(w, z0, dz) {
+	function pocketSlice(w, z0, dz, cut) {
 		var mx = p.marginX, my = p.marginY, R = p.notchR, X1 = p.outerW - w, Y1 = p.outerH - w;
 		function frame(x, y, ww, hh) { if (ww > 0.01 && hh > 0.01) g.add(extrude(rect(x, y, ww, hh), z0, dz, matGrey)); }
 		frame(w, w, mx - w, Y1 - w);                       // left border
@@ -738,12 +776,12 @@ function buildTray(p) {
 		var c, r, cuts;
 		for (c = 0; c + 1 < p.cols; c++) {                 // walls between columns, cut at each row's mid height
 			cuts = [];
-			if (p.notchX) for (r = 0; r < p.rows; r++) { var cy = pocketOrigin(p, r, 0).y + p.pocketH / 2; cuts.push([cy - R, cy + R]); }
+			if (cut && p.notchX) for (r = 0; r < p.rows; r++) { var cy = pocketOrigin(p, r, 0).y + p.pocketH / 2; cuts.push([cy - R, cy + R]); }
 			addBars(z0, dz, pocketOrigin(p, 0, c).x + p.pocketW, p.wall, my, p.outerH - my, cuts, true);
 		}
 		for (r = 0; r + 1 < p.rows; r++) {                 // walls between rows, cut at each column's mid width
 			cuts = [];
-			if (p.notchY) for (c = 0; c < p.cols; c++) { var cx = pocketOrigin(p, 0, c).x + p.pocketW / 2; cuts.push([cx - R, cx + R]); }
+			if (cut && p.notchY) for (c = 0; c < p.cols; c++) { var cx = pocketOrigin(p, 0, c).x + p.pocketW / 2; cuts.push([cx - R, cx + R]); }
 			addBars(z0, dz, pocketOrigin(p, r, 0).y + p.pocketH, p.wall, mx, p.outerW - mx, cuts, false);
 		}
 	}
@@ -766,7 +804,7 @@ function buildTray(p) {
 		var z0 = bounds[i], z1 = bounds[i + 1];
 		if (z1 - z0 < 1e-6) continue;
 		var w = insetAt(p, z0);
-		if (p.notchD > 0 && p.fits && z0 >= p.bodyH - p.notchD - 1e-9) notchSlice(w, z0, z1 - z0);
+		if (z0 >= p.floor - 1e-9 && p.fits) pocketSlice(w, z0, z1 - z0, p.notchD > 0 && z0 >= p.bodyH - p.notchD - 1e-9);
 		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(outerAt(w, z0, z1)) : floorHoles(outerAt(w, z0, z1), z0),
 			z0, z1 - z0, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
 	}
@@ -784,7 +822,7 @@ function buildTray(p) {
 			m.position.set(p.outerW / 2, eng.d, p.labelZ);
 			g.add(m);
 		};
-		place(eng.plate);
+		eng.plates.forEach(place);
 		eng.counters.forEach(place);
 	}
 	var lm = labelMesh(p); if (lm) g.add(lm);
