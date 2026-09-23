@@ -170,7 +170,8 @@
 		</div>
 		<div class="row">
 			<div class="check"><input type="checkbox" id="spin"><label for="spin">Auto-rotate preview</label></div>
-			<div></div>
+			<button class="btn secondary" type="button" onclick="resetValues()" style="padding:9px"
+				title="Back to the starting values for this package. The label text and the package itself are left alone.">↺ Reset values</button>
 		</div>
 		<div class="field">
 			<label for="labelInput">4. Label on the front wall</label>
@@ -212,7 +213,7 @@
 	</div>
 
 	<div class="preview-panel">
-		<div class="view-label">WebGL · left drag = rotate · wheel = zoom · right drag = pan</div>
+		<div class="view-label">WebGL · left drag = rotate · wheel = zoom · right drag = pan · a view button re-centres, even the one already selected</div>
 		<div class="view-btns">
 			<button id="vIso" class="active" onclick="setView('iso')">Isometric</button>
 			<button id="vTop" onclick="setView('top')">Top</button>
@@ -221,13 +222,13 @@
 		<canvas id="canvas3d"></canvas>
 		<div class="stats">
 			<div><div class="k">Tray</div><div class="v" id="sSize">–</div></div>
-			<div><div class="k">Pockets</div><div class="v" id="sCount">–</div></div>
+			<div><div class="k" id="sCountK">Pockets</div><div class="v" id="sCount">–</div></div>
 			<div><div class="k">Filament (solid volume)</div><div class="v" id="sMass">–</div></div>
 		</div>
 	</div>
 
 	<footer>
-		<span style="color:#6b7280">Chip Tray Generator · © 2026 Pavol "Lopo" Hluchý · MIT license ·
+		<span style="color:#6b7280">Chip Tray Generator · <span id="build" title="Quote this when reporting a problem, so it is clear which build you are on. Bumped on every change, not once a day.">build</span> · © 2026 Pavol "Lopo" Hluchý · MIT license ·
 		<a href="https://github.com/Lopo/ChipTrayGenerator" style="color:#f97316;text-decoration:none">github.com/Lopo/ChipTrayGenerator</a> · preview by three.js</span>
 	</footer>
 </div>
@@ -278,15 +279,15 @@ var PACKAGES = [
 	{ id: 'dip14',  fam: 'dip', name: 'DIP-14 0.3" (74xx logic)',                    span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
 	{ id: 'dip16',  fam: 'dip', name: 'DIP-16 0.3" (74xx, 4164 DRAM)',               span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
 	{ id: 'dip18',  fam: 'dip', name: 'DIP-18 0.3" (41256 DRAM, PIC)',               span: 8.3,  len: 23.4, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.920"' },
-	{ id: 'dip20',  fam: 'dip', name: 'DIP-20 0.3" (74xx245, GAL16V8)',              span: 8.3,  len: 26.9, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.060"' },
-	{ id: 'dip24n', fam: 'dip', name: 'DIP-24 0.3" narrow (GAL22V10, 6116)',         span: 8.3,  len: 32.5, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.280"' },
+	{ id: 'dip20',  fam: 'dip', name: 'DIP-20 0.3" (74xx245, GAL16V8)',              span: 8.3,  len: 26.93, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.060"' },
+	{ id: 'dip24n', fam: 'dip', name: 'DIP-24 0.3" narrow (GAL22V10, 6116)',         span: 8.3,  len: 32.52, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.280"' },
 	{ id: 'dip28n', fam: 'dip', name: 'DIP-28 0.3" narrow (28C64, 6264 SRAM)',       span: 8.3,  len: 35.2, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.385"' },
-	{ id: 'dip24w', fam: 'dip', name: 'DIP-24 0.6" wide (2716, 8255, 6821)',         span: 15.9, len: 32.5, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.280", E max 0.625"' },
-	{ id: 'dip28w', fam: 'dip', name: 'DIP-28 0.6" wide (27C256, 6502, Z80 SIO)',    span: 15.9, len: 37.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.470"' },
+	{ id: 'dip24w', fam: 'dip', name: 'DIP-24 0.6" wide (2716, 8255, 6821)',         span: 15.9, len: 32.52, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.280", E max 0.625"' },
+	{ id: 'dip28w', fam: 'dip', name: 'DIP-28 0.6" wide (27C256, 6502, Z80 SIO)',    span: 15.9, len: 37.34, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.470"' },
 	{ id: 'dip32w', fam: 'dip', name: 'DIP-32 0.6" wide (27C010, 28C256, flash)',     span: 15.9, len: 42.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.665"' },
-	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.100"' },
-	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 62.5, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.480"' },
-	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.5, rowSp: 22.86, rail: 20.2, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
+	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.34, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.100"' },
+	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 63.0, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.480"' },
+	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
 ];
 var PLA_DENSITY = 1.24; // g/cm3
 var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
@@ -295,8 +296,17 @@ var CHAMFER_STEPS = 4;   // slices used to approximate the 45° nesting chamfer 
 // and a copy of every hole, which on a 280-chip DIP plate is not cheap, so keep the count small and
 // tessellate the funnel's circles more coarsely than the bore — any seam is inside the hole anyway.
 var HOLE_STEPS = 2, HOLE_SEG = 12;
+// Solids that sit on top of one another are sunk into their neighbour by this much instead of meeting it
+// exactly. Faces that coincide exactly leave edges with four incident triangles, which some slicers report
+// as mesh errors and then "repair" — with unpredictable results. A hundredth of a millimetre is far below
+// anything a printer resolves but far above any merging tolerance a slicer uses.
+var SINK = 0.01;
 
 var $ = function (id) { return document.getElementById(id); };
+var BUILD = '2026-09-23.4';
+var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
+	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
+	'notch', 'recessStyle', 'labelInput', 'labelStyle'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -355,12 +365,12 @@ var FAMILIES = {
 				var ped = rect(cx - p.pedSize / 2, cy - p.pedSize / 2, p.pedSize, p.pedSize);
 				if (p.pedInner > 0) ped.holes.push(rectPath(cx - p.pedInner / 2, cy - p.pedInner / 2, p.pedInner, p.pedInner));
 				else if (p.hole) ped.holes.push(circlePath(cx, cy, p.holeD));
-				g.add(extrude(ped, p.floor, p.pedH, matSup));
+				g.add(extrude(ped, p.floor - SINK, p.pedH + SINK, matSup));
 			}
 			if (p.ledge > 0) {
 				var lg = rect(o.x, o.y, p.pocketW, p.pocketH);
 				lg.holes.push(rectPath(o.x + p.ledge, o.y + p.ledge, p.pocketW - 2 * p.ledge, p.pocketH - 2 * p.ledge));
-				g.add(extrude(lg, p.floor, p.pedH, matSup));
+				g.add(extrude(lg, p.floor - SINK, p.pedH + SINK, matSup));
 			}
 		},
 		holes: function (p) { return p.hole ? [{ x: p.pocketW / 2, y: p.pocketH / 2, d: p.holeD }] : []; },
@@ -422,7 +432,7 @@ var FAMILIES = {
 			var cx = o.x + p.pocketW / 2, cy = o.y + p.pocketH / 2;
 			var pad = rect(cx - p.padW / 2, cy - p.padH / 2, p.padW, p.padH);
 			if (p.hole) pad.holes.push(circlePath(cx, cy, p.holeD));
-			g.add(extrude(pad, p.floor, p.pedH, matSup));
+			g.add(extrude(pad, p.floor - SINK, p.pedH + SINK, matSup));
 		},
 		holes: function (p) { return p.hole ? [{ x: p.pocketW / 2, y: p.pocketH / 2, d: p.holeD }] : []; },
 		area: function (p) { return p.padW * p.padH - (p.hole ? Math.PI * p.holeD * p.holeD / 4 : 0); },
@@ -471,7 +481,7 @@ var FAMILIES = {
 			var rail = p.dipHoriz ? rect(o.x + 1, o.y + p.pocketH / 2 - p.railW / 2, p.pocketW - 2, p.railW)
 			                      : rect(o.x + p.pocketW / 2 - p.railW / 2, o.y + 1, p.railW, p.pocketH - 2);
 			FAMILIES.dip.holes(p).forEach(function (h) { rail.holes.push(circlePath(o.x + h.x, o.y + h.y, h.d)); });
-			g.add(extrude(rail, p.floor, p.pedH, matSup));
+			g.add(extrude(rail, p.floor - SINK, p.pedH + SINK, matSup));
 		},
 		// one hole per chip position, through rail and floor, so a single chip can be pushed out of a full channel
 		holes: function (p) {
@@ -755,6 +765,7 @@ function buildTray(p) {
 	// sealed the push-out holes of the inner pockets. Strips carry no holes at all, so neither problem exists.
 	function addBars(z0, dz, fixed, thick, from, to, cuts, vertical) {
 		cuts.sort(function (a, b) { return a[0] - b[0]; });
+		from -= SINK; to += SINK;            // reach into the frame borders at both ends rather than meeting them
 		var at = from;
 		cuts.concat([[to, to]]).forEach(function (cut) {
 			var end = Math.min(cut[0], to);
@@ -804,22 +815,23 @@ function buildTray(p) {
 		var z0 = bounds[i], z1 = bounds[i + 1];
 		if (z1 - z0 < 1e-6) continue;
 		var w = insetAt(p, z0);
-		if (z0 >= p.floor - 1e-9 && p.fits) pocketSlice(w, z0, z1 - z0, p.notchD > 0 && z0 >= p.bodyH - p.notchD - 1e-9);
+		var zA = i === 0 ? z0 : z0 - SINK;          // the cross-section still comes from z0; only the start moves
+		if (z0 >= p.floor - 1e-9 && p.fits) pocketSlice(w, zA, z1 - zA, p.notchD > 0 && z0 >= p.bodyH - p.notchD - 1e-9);
 		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(outerAt(w, z0, z1)) : floorHoles(outerAt(w, z0, z1), z0),
-			z0, z1 - z0, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
+			zA, z1 - zA, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
 	}
 	// 3. family-specific supports
 	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
 	if (p.rimH > 0) {
 		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
-		g.add(extrude(rim, p.bodyH, p.rimH, matOrange));
+		g.add(extrude(rim, p.bodyH - SINK, p.rimH + SINK, matOrange));
 	}
 	if (eng) {
 		var place = function (shape) {
-			var m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: eng.d, bevelEnabled: false, curveSegments: 12 }), matGrey);
+			var m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: eng.d + SINK, bevelEnabled: false, curveSegments: 12 }), matGrey);
 			m.rotation.x = Math.PI / 2;                       // shape lies in XZ, extrudes towards -Y into the gap
-			m.position.set(p.outerW / 2, eng.d, p.labelZ);
+			m.position.set(p.outerW / 2, eng.d, p.labelZ);    // reaches SINK deeper than the notch it fills
 			g.add(m);
 		};
 		eng.plates.forEach(place);
@@ -863,7 +875,12 @@ function rebuild() {
 		// Wall value that makes the outer margin equal to the gap between pockets, per axis — the leftover
 		// otherwise all ends up in the outer margin. Shown as a number so it stays one slider, not another option.
 		var evenX = (p.outerW - p.cols * p.pocketW) / (p.cols + 1), evenY = (p.outerH - p.rows * p.pocketH) / (p.rows + 1);
-		$('fixedInfo').innerHTML = 'Fits max. <strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets · outer margin '
+		// DIP counts channels, not chips, so say both — a channel holds several parts and the difference matters.
+		var fits = p.fam === 'dip'
+			? '<strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> channels of ' + p.perRow + ' = <strong>'
+				+ (p.maxRows * p.maxCols * p.perRow) + '</strong> chips'
+			: '<strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets';
+		$('fixedInfo').innerHTML = 'Fits max. ' + fits + ' · outer margin '
 			+ p.marginX.toFixed(1) + ' / ' + p.marginY.toFixed(1) + ' mm<br>even spacing at wall '
 			+ evenX.toFixed(1) + ' mm across, ' + evenY.toFixed(1) + ' mm down';
 		if (p.clamped) { $('rows').value = p.rows; $('cols').value = p.cols; }
@@ -901,7 +918,8 @@ function rebuild() {
 	F.warnings(p, s, warn);
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
 	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
-	$('sCount').textContent = (p.rows * p.cols) + (p.fam === 'dip' ? ' channels · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
+	$('sCountK').textContent = p.fam === 'dip' ? 'Channels / chips' : 'Pockets';
+	$('sCount').textContent = (p.rows * p.cols) + (p.fam === 'dip' ? ' · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
 	$('sMass').textContent = '~' + (volumeMm3(p) / 1000 * PLA_DENSITY).toFixed(0) + ' g PLA';
 	if (!ok3d) return;
 	while (trayGroup.children.length) { var ch = trayGroup.children[0]; trayGroup.remove(ch); ch.traverse(function (m) { if (m.geometry) m.geometry.dispose(); }); }
@@ -954,6 +972,42 @@ function fitDistance(dir, target, p) {
 	return 1.12 * Math.max(maxV / tanV, maxR / tanH) + maxD;
 }
 
+// Every export carries the settings that made it, so a bug report only has to attach the file. Built from
+// CONTROLS, so a new control lands in the dump on its own and the two cannot drift apart.
+function settingsLine() {
+	return 'CTG build=' + BUILD + ' ' + CONTROLS.map(function (id) {
+		var el = $(id);
+		var v = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
+		return id + '=' + String(v).replace(/\s+/g, '_');
+	}).join(' ');
+}
+// The binary STL header is exactly 80 bytes, so that one gets the short form and a pointer to the others.
+function settingsShort(p) {
+	var t = 'CTG ' + BUILD + ' ' + p.sock.id + ' ' + p.rows + 'x' + p.cols
+		+ (p.fam === 'dip' ? 'x' + p.perRow : '') + ' '
+		+ (p.fixed ? p.outerW + 'x' + p.outerH : 'auto')
+		+ ' tol' + p.tol + ' w' + p.wall + ' fl' + p.floor + ' d' + p.depth;
+	return t.slice(0, 80);
+}
+
+// Back to the values the page starts with, then the defaults this package asks for. The package selector and
+// the label text are deliberately left alone: the label is remembered per package and losing it would annoy.
+function resetValues() {
+	CONTROLS.forEach(function (id) {
+		if (id === 'sock' || id === 'labelInput') return;
+		var el = $(id);
+		if (el.type === 'checkbox') el.checked = el.defaultChecked;
+		else if (el.tagName === 'SELECT') {
+			var pick = 0;
+			for (var i = 0; i < el.options.length; i++) if (el.options[i].defaultSelected) pick = i;
+			el.selectedIndex = pick;
+		} else el.value = el.defaultValue;
+	});
+	applyPackageDefaults();
+	rebuild();
+	setView(viewMode);
+}
+
 var viewMode = 'iso';
 function setView(mode) {
 	viewMode = mode; ['vIso', 'vTop', 'vBottom'].forEach(function (id) { $(id).classList.remove('active'); });
@@ -994,6 +1048,7 @@ function fileBase(p) { return 'tray_' + p.sock.id + '_' + p.rows + 'x' + p.cols 
 function exportScad() {
 	var p = params(), s = p.sock, L = [];
 	L.push('// Retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
+	L.push('// ' + settingsLine());
 	L.push('// ' + s.name + ' — ' + s.src);
 	L.push('// family: ' + p.fam);
 	L.push('$fn = 48;');
@@ -1145,7 +1200,7 @@ function meshData(group, wantLabel) {
 			v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
 			var key = v.x.toFixed(3) + ',' + v.y.toFixed(3) + ',' + v.z.toFixed(3);
 			var id = map[key];
-			if (id === undefined) { id = verts.length; map[key] = id; verts.push([v.x, v.y, v.z]); }
+			if (id === undefined) { id = verts.length; map[key] = id; verts.push(key.split(',').map(Number)); }
 			ids[i] = id;
 		}
 		var count = idx ? idx.count : pos.count;
@@ -1169,10 +1224,13 @@ function exportThreeMF() {
 	all.forEach(function (q) { for (var k = 0; k < 3; k++) if (q[k] < mn[k]) mn[k] = q[k]; });
 	all.forEach(function (q) { for (var k = 0; k < 3; k++) q[k] -= mn[k]; });
 	var x = ['<?xml version="1.0" encoding="UTF-8"?>',
-		'<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
-		'<metadata name="Application">Chip Tray Generator</metadata>',
+		'<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"'
+		+ ' xmlns:ctg="https://lopo.github.io/ChipTrayGenerator">',   // declared, so the custom metadata name is valid
+		'<!-- ' + settingsLine() + ' -->',
+		'<metadata name="Application">Chip Tray Generator build ' + BUILD + '</metadata>',
 		'<metadata name="Title">' + fileBase(p) + '</metadata>',
 		'<metadata name="Description">' + p.sock.name.replace(/[<>&]/g, ' ') + '</metadata>',
+		'<metadata name="ctg:settings">' + settingsLine().replace(/[<>&"]/g, ' ') + '</metadata>',
 		'<resources>',
 		'<basematerials id="2"><base name="Tray" displaycolor="#3F4F63FF"/><base name="Label" displaycolor="' + LABEL_COLOR_HEX + 'FF"/></basematerials>'];
 	function emit(id, md, pindex) {
@@ -1210,12 +1268,15 @@ function exportStl() {
 	g.children.filter(function (m) { return m.userData.previewOnly; }).forEach(function (m) { g.remove(m); });
 	g.updateMatrixWorld(true);
 	var exporter = new THREE.STLExporter();
-	download(fileBase(p) + '.stl', new Blob([exporter.parse(g, { binary: true })], { type: 'model/stl' }));
+	var buf = exporter.parse(g, { binary: true });
+	var head = new Uint8Array(buf.buffer || buf, 0, 80), txt = settingsShort(p);
+	head.fill(0);                                   // must not start with "solid" or readers take it for ASCII
+	for (var i = 0; i < txt.length; i++) head[i] = txt.charCodeAt(i) & 0x7f;
+	download(fileBase(p) + '.stl', new Blob([buf], { type: 'model/stl' }));
 }
 
 // ===========================================================================
-['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall', 'floor', 'depth', 'ped',
- 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD', 'notch', 'recessStyle', 'labelInput', 'labelStyle'].forEach(function (id) {
+CONTROLS.forEach(function (id) {
 	$(id).addEventListener('input', function () {
 		if (id === 'sock') applyPackageDefaults();
 		if (id === 'labelInput') saveLabel(currentPkg().id, $('labelInput').value);
@@ -1223,6 +1284,7 @@ function exportStl() {
 		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
 	});
 });
+$('build').textContent = 'build ' + BUILD;
 applyPackageDefaults(); rebuild(); setView('iso'); animate();
 </script>
 </body>
