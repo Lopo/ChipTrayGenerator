@@ -185,7 +185,7 @@
 					<option value="none">No label</option>
 				</select>
 			</div>
-			<div></div>
+			<div class="check"><input type="checkbox" id="labelRim" checked><label for="labelRim">Let the label run up onto the stacking rim — its face is flush with the wall and stays visible when stacked</label></div>
 		</div>
 
 		<div class="spec-box">
@@ -303,10 +303,10 @@ var HOLE_STEPS = 2, HOLE_SEG = 12;
 var SINK = 0.01;
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-09-23.4';
+var BUILD = '2026-09-23.5';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
-	'notch', 'recessStyle', 'labelInput', 'labelStyle'];
+	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -563,7 +563,11 @@ function params() {
 	p.wallBase = Math.min(p.marginX, p.marginY) - insetAt(p, p.floor);
 	// The label is cut into / raised off the front face, which only exists at full width above insetTop —
 	// below that it would hang in the air in front of the chamfer.
-	p.labelBand = p.bodyH - p.insetTop;
+	// The rim's outer face is flush with the wall, so the label may use it too: on a shallow tray that roughly
+	// doubles the height left for it. It stays visible when stacked — the tray above is inset over the rim.
+	p.labelOnRim = $('labelRim').checked && p.rimH > 0;
+	p.labelTop = p.labelOnRim ? p.totalH : p.bodyH;
+	p.labelBand = p.labelTop - p.insetTop;
 	p.labelSize = Math.min(5, Math.max(1.2, p.labelBand * 0.85));
 	p.labelZ = p.insetTop + p.labelBand / 2;
 	p.labelDepth = Math.max(0.3, Math.min(0.8, p.wall / 3));   // never cut more than a third of the outer wall
@@ -658,7 +662,9 @@ function engravePlan(p) {
 	var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
 	function xf(q) { return { x: (q.x - cx) * k, y: (q.y - cy) * k }; }
 	var gw = (maxX - minX) * k, gh = (maxY - minY) * k;
-	var pad = Math.max(0.2, Math.min(1.0, (p.labelBand - gh) / 2 - 0.1));
+	// Margin around the glyphs, but never so much that the patch leaves the band: on a shallow tray a fixed
+	// minimum pushed it down in front of the chamfer and up past the top.
+	var pad = Math.max(0.02, Math.min(1.0, (p.labelBand - gh) / 2 - 0.02));
 	var hw = gw / 2 + pad, hh = gh / 2 + pad;
 	// The plate is cut into vertical strips, one glyph per strip. A single shape carrying every glyph as a
 	// hole triangulates with bridge edges that are traversed only once, which leaves the cap open — the same
@@ -824,8 +830,18 @@ function buildTray(p) {
 	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
 	if (p.rimH > 0) {
-		var rim = rect(0, 0, p.outerW, p.outerH); rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
-		g.add(extrude(rim, p.bodyH - SINK, p.rimH + SINK, matOrange));
+		// Sliced where an engraved label reaches up into it, and notched in that slice like the body below. The
+		// rim keeps a single hole (its inside) either way, so the notch does not cost it its watertightness.
+		var rb = [p.bodyH, p.totalH];
+		if (eng && eng.z1 > p.bodyH + 1e-9) rb.push(Math.min(eng.z1, p.totalH));
+		rb = rb.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+		for (var ri = 0; ri + 1 < rb.length; ri++) {
+			var ra = rb[ri], rz = rb[ri + 1];
+			if (rz - ra < 1e-6) continue;
+			var rim = outerAt(0, ra, rz);
+			rim.holes.push(rectPath(p.rimW, p.rimW, p.outerW - 2 * p.rimW, p.outerH - 2 * p.rimW));
+			g.add(extrude(rim, ra - SINK, rz - ra + SINK, matOrange));
+		}
 	}
 	if (eng) {
 		var place = function (shape) {
@@ -913,7 +929,7 @@ function rebuild() {
 	if (p.rimH > 0 && p.rimH + 0.3 > p.bodyH - 1) warn.push('Rim too high for this tray: recess limited to ' + p.recessH.toFixed(1) + ' mm.');
 	if (p.rimH > 0 && !p.recessChamfer) warn.push('Square nesting step: the ' + p.recessW.toFixed(2) + ' mm ledge around the underside overhangs by 90°. Print with support (or let the slicer bridge it) — the chamfer option avoids that, and nests exactly the same.');
 	if (p.rimH > 0 && p.fits && p.wallBase < 0.8) warn.push('Outer wall is only ' + p.wallBase.toFixed(2) + ' mm thick where it meets the floor, because the underside is inset by ' + p.recessW.toFixed(2) + ' mm there. Widen the wall to ≥ ' + (p.recessW + 0.8).toFixed(2) + ' mm' + (p.flareH > 0 ? ', or raise the floor to ' + p.insetTop.toFixed(1) + ' mm so the chamfer stays inside the solid floor' : '') + '.');
-	if (p.labelStyle !== 'none' && p.label && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of front wall sits at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' recess') + ', so the label is shrunk to fit. Deepen the pockets, raise the floor' + (p.flareH > 0 ? ', or use the square step' : '') + ' for a readable label.');
+	if (p.labelStyle !== 'none' && p.label && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of front wall sits at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' recess') + ', so the label is shrunk to fit. Deepen the pockets, raise the floor' + (p.flareH > 0 ? ', or use the square step' : '') + (p.rimH > 0 && !p.labelOnRim ? ', or let it run up onto the rim' : '') + ' for a readable label.');
 	if (p.rimH > 0 && p.recessChamfer && p.flareH < p.recessW - 1e-6) warn.push('Body too shallow for a full chamfer: the flare above the recess is only ' + p.flareH.toFixed(2) + ' mm instead of ' + p.recessW.toFixed(2) + ' mm, so it is steeper than 45°. Increase the pocket depth or the floor.');
 	F.warnings(p, s, warn);
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
