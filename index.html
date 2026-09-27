@@ -100,6 +100,10 @@
 			<label for="sock">1. Package / socket</label>
 			<select id="sock"></select>
 		</div>
+		<div class="row">
+			<div class="check"><input type="checkbox" id="lidOn"><label for="lidOn">Lid for this tray — a flat cover that closes the stack (size, rim and recess are taken from the tray settings)</label></div>
+			<div class="field" data-lid="only"><label for="lidH">Lid thickness <span class="val" id="lidHV">6.0 mm</span></label><input type="range" id="lidH" min="3" max="12" step="0.5" value="6"></div>
+		</div>
 		<div class="row" data-fam="custom">
 			<div class="field"><label>Package width <span class="val">mm</span></label><input type="number" id="cw" value="40" step="0.1" min="5" max="120"></div>
 			<div class="field"><label>Package length <span class="val">mm</span></label><input type="number" id="ch" value="40" step="0.1" min="5" max="120"></div>
@@ -129,25 +133,25 @@
 		</div>
 		<div class="row">
 			<div class="field"><label for="wall">Wall between pockets <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="8" step="0.5" value="3"></div>
-			<div class="field"><label for="floor">Floor <span class="val" id="floorV">2.5 mm</span></label><input type="range" id="floor" min="1" max="6" step="0.5" value="2.5"></div>
+			<div class="field" data-lid="hide"><label for="floor">Floor <span class="val" id="floorV">2.5 mm</span></label><input type="range" id="floor" min="1" max="6" step="0.5" value="2.5"></div>
 		</div>
-		<div class="row">
+		<div class="row" data-lid="hide">
 			<div class="field"><label for="depth">Pocket depth <span class="val" id="depthV">8.5 mm</span></label><input type="range" id="depth" min="2" max="16" step="0.5" value="8.5"></div>
 			<div class="field"><label for="ped">Support height <span class="val" id="pedV">4.0 mm</span></label><input type="range" id="ped" min="0" max="8" step="0.5" value="4"></div>
 		</div>
-		<div class="row" data-fam="pga">
+		<div class="row" data-fam="pga" data-lid="hide">
 			<div class="check"><input type="checkbox" id="pedOn" checked><label for="pedOn">Central pedestal (package rests on its pin-free centre)</label></div>
 			<div class="field"><label for="pedSize">Pedestal side <span class="val" id="pedSizeV">16 mm</span></label><input type="range" id="pedSize" min="6" max="40" step="1" value="16"></div>
 		</div>
-		<div class="row" data-fam="pga">
+		<div class="row" data-fam="pga" data-lid="hide">
 			<div class="field"><label for="ledge">Edge ledge under the substrate rim <span class="val" id="ledgeV">0.0 mm</span></label><input type="range" id="ledge" min="0" max="3" step="0.25" value="0"></div>
 			<div></div>
 		</div>
-		<div class="row" data-fam="qfp">
+		<div class="row" data-fam="qfp" data-lid="hide">
 			<div class="field"><label for="inset">Pad inset from the body edge <span class="val" id="insetV">0.5 mm</span></label><input type="range" id="inset" min="0" max="4" step="0.25" value="0.5"></div>
 			<div></div>
 		</div>
-		<div class="row" data-fam="pga qfp dip">
+		<div class="row" data-fam="pga qfp dip" data-lid="hide">
 			<div class="check"><input type="checkbox" id="hole" checked><label for="hole">Push-out hole through the support and floor</label></div>
 			<div class="field"><label for="holeD">Hole diameter <span class="val" id="holeDV">10 mm</span></label><input type="range" id="holeD" min="3" max="30" step="1" value="10"></div>
 		</div>
@@ -155,7 +159,11 @@
 			<div class="field"><label for="railW">Centre rail width <span class="val" id="railWV">12.6 mm</span></label><input type="range" id="railW" min="2" max="24" step="0.2" value="12.6"></div>
 			<div class="check"><input type="checkbox" id="dipHoriz"><label for="dipHoriz">Channels along the width (rotate 90°)</label></div>
 		</div>
-		<div class="row" data-fam="pga qfp">
+		<div class="row" data-fam="dip" data-lid="hide">
+			<div class="check"><input type="checkbox" id="dipSep" checked><label for="dipSep">Separators between chips — low walls, half the body height, so chips cannot slide into each other and can still be gripped by the widest part</label></div>
+			<div></div>
+		</div>
+		<div class="row" data-fam="pga qfp" data-lid="hide">
 			<div class="check"><input type="checkbox" id="notch" checked><label for="notch">Finger notches — slot the wall between pockets down to the chip so it can be picked out sideways</label></div>
 			<div></div>
 		</div>
@@ -174,7 +182,7 @@
 				title="Back to the starting values for this package. The label text and the package itself are left alone.">↺ Reset values</button>
 		</div>
 		<div class="field">
-			<label for="labelInput">4. Label on the front wall</label>
+			<label for="labelInput" id="labelCaption">4. Label on the front wall</label>
 			<input type="text" id="labelInput" value="AMD K6-III+" maxlength="40" placeholder="e.g. INTEL DX2-66, AM386DX-40, 8042 KBC, 82C822 ...">
 		</div>
 		<div class="row">
@@ -185,7 +193,17 @@
 					<option value="none">No label</option>
 				</select>
 			</div>
-			<div class="check"><input type="checkbox" id="labelRim" checked><label for="labelRim">Let the label run up onto the stacking rim — its face is flush with the wall and stays visible when stacked</label></div>
+			<div class="check" data-lid="hide"><input type="checkbox" id="labelRim" checked><label for="labelRim">Let the label run up onto the stacking rim — its face is flush with the wall and stays visible when stacked</label></div>
+		</div>
+
+		<div class="row" data-lid="only">
+			<div class="field"><label for="labelPos">Label position on the lid</label>
+				<select id="labelPos" title="On top: the large free area, so the letters can be much bigger, and a single-nozzle printer can do a second colour with a filament change at that layer.&#10;On the front edge: like the trays, so it lines up with the stack.">
+					<option value="top" selected>On top (large)</option>
+					<option value="front">On the front edge</option>
+				</select>
+			</div>
+			<div></div>
 		</div>
 
 		<div class="spec-box">
@@ -250,7 +268,9 @@ var PACKAGES = [
 	{ id: 'pga168', fam: 'pga', name: 'PGA168/169 — 486, Socket 1–3, 5x86 (45.2 mm)',               w: 45.2, h: 45.2, ped: 22, edge: 2.2, ledge: 0,    cap: 0,  pins: 168, src: 'Intel packaging databook 1.75 in = 44.19–45.21 mm, 17×17 @ 2.54 mm, 3 rows — max taken so every specimen fits' },
 	{ id: 's7',     fam: 'pga', name: 'SPGA296/321 — Pentium, MMX, K5, K6, Socket 5/7 (49.8 mm)',   w: 49.8, h: 49.8, ped: 26, edge: 1.9, ledge: 0,    cap: 0,  pins: 321, src: 'Intel 241997 Tab.19 1.95"; AMD 21850 Tab.73 A 49.28–49.78, pins 3.05–3.30; pin-free centre ≥ 23×25 positions ≈ 29 mm (Socket 7 pin-side view, K6-2 Fig.113)' },
 	{ id: 's370',   fam: 'pga', name: 'PPGA / FC-PGA 370 — Celeron, Pentium III, Cyrix III (49.8 mm)', w: 49.8, h: 49.8, ped: 21, edge: 1.9, ledge: 1.5, cap: 17.8, pins: 370, src: 'Intel 245264 Tab.35: D 49.43–49.63, D1 45.7, pins 3.05–3.30; bottom-side capacitors inside G1/G2 = 17.78 mm; pin-free centre ≈ 22 mm (Fig.31)' },
-	{ id: 'sA',     fam: 'pga', name: 'Socket A 462 — Athlon, Duron, Athlon XP (49.8 mm)',          w: 49.8, h: 49.8, ped: 26, edge: 1.9, ledge: 0,    cap: 0,  pins: 462, src: 'AMD 25175 Tab.21 / Fig.14, 17: D 49.27–49.78, D1 45.72, pins 3.05–3.31; clean underside, pin-free centre 21×21 positions ≈ 27 mm' },
+	{ id: 'sA',     fam: 'pga', name: 'Socket A 462 — Athlon, Duron, Athlon XP (49.8 mm)',          w: 49.8, h: 49.8, ped: 26, edge: 1.9, ledge: 1.5,  cap: 0,  pedOff: true, pins: 462,
+	  pedNote: 'Palomino (Athlon XP Model 6) carries 12 passive components in the underside centre (AMD 24309 Fig.13) and the pedestal would press on them. Every other Socket A part AMD drew — Thunderbird, Thoroughbred, Barton, Duron Spitfire and Morgan, Sempron Model 8 and 10 — has a clean underside centre, so the pedestal is fine for those.',
+	  src: 'AMD 25175 Tab.21 / Fig.14, 17: D 49.27–49.78, D1 45.72, pins 3.05–3.31. Underside centre clean on Model 4 (23792 Fig.11), 8 (25175 Fig.14) and 10 (26237 Fig.14/15), Duron Model 3 (23802 Fig.11) and 7 (24310 Fig.13), Sempron Model 8 (31693 Fig.13) and 10 (31994 Fig.13/14); only Palomino Model 6 has 12 passives there (24309 Fig.13) → edge ledge by default' },
 	{ id: 's423',   fam: 'pga', name: 'Socket 423 — Pentium 4 Willamette (53.3 mm)',               w: 53.3, h: 53.3, ped: 0,  edge: 1.9, ledge: 1.5, cap: 99, pins: 423, src: '2.1" × 2.1" (Intel PGA423); underside carries capacitors → edge ledge only' },
 	{ id: 's478',   fam: 'pga', name: 'mPGA478 / 479 / Socket M / P — Pentium 4, Pentium M, Core 2 mobile (35 mm)', w: 35, h: 35, ped: 0, edge: 1.6, ledge: 1.25, cap: 99, pins: 478, src: '35 × 35 mm (Intel mPGA478 design guide); underside carries capacitors → edge ledge only' },
 	{ id: 's604',   fam: 'pga', name: 'mPGA604 — Xeon Nocona/Irwindale (42.5 mm)',                 w: 42.5, h: 42.5, ped: 0,  edge: 1.0, ledge: 0.75, cap: 99, pins: 604, src: '42.5 × 42.5 mm (Wikipedia Socket 604); early Foster/Prestonia Xeons are 53.3 mm — use custom size; edge margin approx.' },
@@ -275,19 +295,19 @@ var PACKAGES = [
 	{ id: 'plcc68',   fam: 'qfp', name: 'PLCC-68 (286, V20/V30 PLCC, 80186, ISA VGA chips)',       span: 25.3, spanH: 25.3, body: 24.2, bodyH: 24.2, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AE: D 0.995", body 0.950"' },
 	{ id: 'plcc84',   fam: 'qfp', name: 'PLCC-84 (ATF1508, TLC34075 RAMDAC, chipset)',             span: 30.4, spanH: 30.4, body: 29.3, bodyH: 29.3, inset: 1.5, thick: 4.4, src: 'JEDEC MS-018 AF: D 1.195", body 1.150"' },
 	{ group: 'DIP chips (channels, chips end to end)' },
-	{ id: 'dip8',   fam: 'dip', name: 'DIP-8 0.3" (op-amps, 555, small EEPROM)',      span: 8.3,  len: 10.2, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.400", E max 0.325"' },
-	{ id: 'dip14',  fam: 'dip', name: 'DIP-14 0.3" (74xx logic)',                    span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
-	{ id: 'dip16',  fam: 'dip', name: 'DIP-16 0.3" (74xx, 4164 DRAM)',               span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.775"' },
-	{ id: 'dip18',  fam: 'dip', name: 'DIP-18 0.3" (41256 DRAM, PIC)',               span: 8.3,  len: 23.4, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 0.920"' },
-	{ id: 'dip20',  fam: 'dip', name: 'DIP-20 0.3" (74xx245, GAL16V8)',              span: 8.3,  len: 26.93, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.060"' },
-	{ id: 'dip24n', fam: 'dip', name: 'DIP-24 0.3" narrow (GAL22V10, 6116)',         span: 8.3,  len: 32.52, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.280"' },
-	{ id: 'dip28n', fam: 'dip', name: 'DIP-28 0.3" narrow (28C64, 6264 SRAM)',       span: 8.3,  len: 35.2, rowSp: 7.62,  rail: 5.0,  src: 'JEDEC MS-001, max body 1.385"' },
-	{ id: 'dip24w', fam: 'dip', name: 'DIP-24 0.6" wide (2716, 8255, 6821)',         span: 15.9, len: 32.52, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.280", E max 0.625"' },
-	{ id: 'dip28w', fam: 'dip', name: 'DIP-28 0.6" wide (27C256, 6502, Z80 SIO)',    span: 15.9, len: 37.34, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.470"' },
-	{ id: 'dip32w', fam: 'dip', name: 'DIP-32 0.6" wide (27C010, 28C256, flash)',     span: 15.9, len: 42.3, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 1.665"' },
-	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.34, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.100"' },
-	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 63.0, rowSp: 15.24, rail: 12.6, src: 'JEDEC MS-011, max body 2.480"' },
-	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
+	{ id: 'dip8',   fam: 'dip', name: 'DIP-8 0.3" (op-amps, 555, small EEPROM)',      span: 8.3,  len: 10.2, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 0.400", E max 0.325"' },
+	{ id: 'dip14',  fam: 'dip', name: 'DIP-14 0.3" (74xx logic)',                    span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 0.775"' },
+	{ id: 'dip16',  fam: 'dip', name: 'DIP-16 0.3" (74xx, 4164 DRAM)',               span: 8.3,  len: 19.7, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 0.775"' },
+	{ id: 'dip18',  fam: 'dip', name: 'DIP-18 0.3" (41256 DRAM, PIC)',               span: 8.3,  len: 23.4, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 0.920"' },
+	{ id: 'dip20',  fam: 'dip', name: 'DIP-20 0.3" (74xx245, GAL16V8)',              span: 8.3,  len: 26.93, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 1.060"' },
+	{ id: 'dip24n', fam: 'dip', name: 'DIP-24 0.3" narrow (GAL22V10, 6116)',         span: 8.3,  len: 32.52, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 1.280"' },
+	{ id: 'dip28n', fam: 'dip', name: 'DIP-28 0.3" narrow (28C64, 6264 SRAM)',       span: 8.3,  len: 35.2, rowSp: 7.62,  rail: 5.0,  bodyMin: 2.92, src: 'JEDEC MS-001, max body 1.385"' },
+	{ id: 'dip24w', fam: 'dip', name: 'DIP-24 0.6" wide (2716, 8255, 6821)',         span: 15.9, len: 32.52, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 1.280", E max 0.625"' },
+	{ id: 'dip28w', fam: 'dip', name: 'DIP-28 0.6" wide (27C256, 6502, Z80 SIO)',    span: 15.9, len: 37.34, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 1.470"' },
+	{ id: 'dip32w', fam: 'dip', name: 'DIP-32 0.6" wide (27C010, 28C256, flash)',     span: 15.9, len: 42.3, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 1.665"' },
+	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.34, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 2.100"' },
+	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 63.0, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 2.480"' },
+	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, bodyMin: 3.56, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
 ];
 var PLA_DENSITY = 1.24; // g/cm3
 var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
@@ -301,12 +321,18 @@ var HOLE_STEPS = 2, HOLE_SEG = 12;
 // as mesh errors and then "repair" — with unpredictable results. A hundredth of a millimetre is far below
 // anything a printer resolves but far above any merging tolerance a slicer uses.
 var SINK = 0.01;
+var LID_EDGE = 1.0;
+// DIP body thickness minimum (A2) per row spacing, from Microchip DS00049AF, whose PDIP tables cite JEDEC MS-001
+// (300 mil: 2.92–3.68 mm) and MS-011 (600 mil: 3.56–4.06 mm). The 0.9" DIP-64 has no table on file and takes
+// the 600 mil value. A separator ends at half the THINNEST body above the rail, rounded down to 0.1 mm, so it
+// never rises past the widest part of a plastic body, the parting line, where a fingernail gets hold.
+function sepAbove(s) { return Math.floor((s.bodyMin || 3.56) / 2 * 10) / 10; }      // upright edge kept on top of a lid's chamfer, whatever its thickness
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-09-23.5';
+var BUILD = '2026-09-27.1';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
-	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim'];
+	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -341,7 +367,7 @@ function extrude(shape, z0, dz, mat, seg) {
 var FAMILIES = {
 	pga: {
 		defaults: function (s, famChanged) {
-			$('pedSize').value = s.ped || 16; $('ledge').value = s.ledge; $('pedOn').checked = !(s.cap > 0);
+			$('pedSize').value = s.ped || 16; $('ledge').value = s.ledge; $('pedOn').checked = !(s.cap > 0) && !s.pedOff;
 			if (famChanged) { $('depth').value = 8.5; $('ped').value = 4; $('hole').checked = true; $('holeD').value = 10; if (parseInt($('rows').value) < 2) $('rows').value = 2; }
 		},
 		pocket: function (s, p) {
@@ -394,6 +420,7 @@ var FAMILIES = {
 			if (p.ledge > 0 && s.edge < 1.2 && p.tol > 0.3) w.push('Thin ledge: keep the tolerance at 0.3 mm or less so the package cannot shift off it.');
 			if (p.pedH > 0 && p.pedH < 3.4) w.push('Support lower than the pin length (3.3 mm), pins would touch the floor.');
 			if (p.pedH > 0 && !p.pedOn && p.ledge === 0) w.push('No pedestal and no ledge: the package would rest on its pins.');
+			if (p.pedOn && s.pedNote) w.push(s.pedNote);
 		},
 		scad: function (p, L) {
 			L.push('ped_on = ' + (p.pedOn ? 1 : 0) + ';       // 1 = central pedestal');
@@ -473,6 +500,12 @@ var FAMILIES = {
 			if (p.dipHoriz) { p.pkgW = chLen; p.pkgH = s.span; } else { p.pkgW = s.span; p.pkgH = chLen; }
 			p.railW = Math.min(parseFloat($('railW').value), s.span + p.tol - 2);
 			p.chipPitch = s.len + p.chipGap;
+			// Separators sit centred in the gap and are gap − tolerance thick, so every chip gets a slot exactly
+			// its length plus the tolerance, like a PGA pocket. Pins never reach past the body, so a separator can
+			// run wall to wall across the channel and through the rail.
+			p.sepT = p.chipGap - p.tol;
+			p.dipSep = $('dipSep').checked && !$('lidOn').checked && p.perRow > 1 && p.sepT > 0.2;
+			p.sepH = Math.min(parseFloat($('ped').value) + sepAbove(s), parseFloat($('depth').value));   // above the floor
 			p.hole = $('hole').checked;
 			p.holeD = Math.min(parseFloat($('holeD').value), Math.max(0, Math.min(p.railW - 2, s.len - 3)));
 			if (p.hole && p.holeD < 3) p.hole = false;
@@ -482,6 +515,12 @@ var FAMILIES = {
 			                      : rect(o.x + p.pocketW / 2 - p.railW / 2, o.y + 1, p.railW, p.pocketH - 2);
 			FAMILIES.dip.holes(p).forEach(function (h) { rail.holes.push(circlePath(o.x + h.x, o.y + h.y, h.d)); });
 			g.add(extrude(rail, p.floor - SINK, p.pedH + SINK, matSup));
+			if (p.dipSep) for (var i = 0; i + 1 < p.perRow; i++) {
+				var a = p.tol / 2 + i * p.chipPitch + p.sock.len + p.chipGap / 2 - p.sepT / 2;   // along the channel
+				var sep = p.dipHoriz ? rect(o.x + a, o.y - SINK, p.sepT, p.pocketH + 2 * SINK)
+				                     : rect(o.x - SINK, o.y + a, p.pocketW + 2 * SINK, p.sepT);    // wall to wall, into both walls
+				g.add(extrude(sep, p.floor - 2 * SINK, p.sepH + 2 * SINK, matSup));
+			}
 		},
 		// one hole per chip position, through rail and floor, so a single chip can be pushed out of a full channel
 		holes: function (p) {
@@ -494,14 +533,18 @@ var FAMILIES = {
 			return out;
 		},
 		area: function (p) {
-			return p.railW * ((p.dipHoriz ? p.pocketW : p.pocketH) - 2)
+			var a = p.railW * ((p.dipHoriz ? p.pocketW : p.pocketH) - 2)
 				- FAMILIES.dip.holes(p).length * Math.PI * p.holeD * p.holeD / 4;
+			// separators, as an equivalent area at rail height (volume = area × pedH), minus where they cross the rail
+			if (p.dipSep && p.pedH > 0) a += (p.perRow - 1) * p.sepT * ((p.dipHoriz ? p.pocketH : p.pocketW) * p.sepH - p.railW * p.pedH) / p.pedH;
+			return a;
 		},
 		table: function (p, s) { return ['Centre rail', p.railW.toFixed(1) + ' mm wide (max ' + (s.rowSp - 1.4).toFixed(1) + ' = row spacing − pins)']; },
 		warnings: function (p, s, w) {
 			if (p.perRowClamped) w.push('Chips per channel reduced to ' + p.perRow + ' so one channel fits the fixed format' + (p.dipHoriz ? '' : ' (try "Channels along the width")') + '.');
 			if (p.railW > s.rowSp - 1.4) w.push('Rail is wider than the gap between the pin rows, pins would sit on the rail.');
 			if (p.pedH > 0 && p.pedH < 3.5) w.push('Rail lower than the DIP pin length (~3.5 mm), pin tips would touch the floor.');
+			if ($('dipSep').checked && p.perRow > 1 && p.sepT < 0.8) w.push('Separators would be only ' + Math.max(0, p.sepT).toFixed(2) + ' mm thick (gap between chips minus tolerance)' + (p.sepT > 0.2 ? '' : ', so they are left out') + '. Widen the gap between chips to at least ' + (0.8 + p.tol).toFixed(2) + ' mm.');
 		},
 		scad: function (p, L) {
 			L.push('chips_per_row = ' + p.perRow + ';');
@@ -509,8 +552,15 @@ var FAMILIES = {
 			L.push('rail_w = ' + p.railW.toFixed(2) + ';     // centre rail between the pin rows (< row spacing − pins)');
 			L.push('rail_along_x = ' + (p.dipHoriz ? 1 : 0) + ';  // 1 = channels run along the tray width');
 			L.push('hole_d = ' + (p.hole ? p.holeD : 0) + ';     // one push-out hole per chip, through rail and floor');
+			L.push('chip_len = ' + p.sock.len + ';');
+			L.push('sep_t = ' + (p.dipSep ? p.sepT.toFixed(2) : 0) + ';     // separator between chips = gap - tolerance, 0 = none');
+			L.push('sep_h = ' + p.sepH.toFixed(2) + ';     // separator height above the floor: rail + half the thinnest body (' + (p.sock.bodyMin || 3.56) + ' mm)');
 			L.push('module support() { difference() {');
-			L.push('  if (rail_along_x) translate([1, pocket_h/2 - rail_w/2, 0]) cube([pocket_w - 2, rail_w, sup_h]); else translate([pocket_w/2 - rail_w/2, 1, 0]) cube([rail_w, pocket_h - 2, sup_h]);');
+			L.push('  union() {');
+			L.push('    if (rail_along_x) translate([1, pocket_h/2 - rail_w/2, 0]) cube([pocket_w - 2, rail_w, sup_h]); else translate([pocket_w/2 - rail_w/2, 1, 0]) cube([rail_w, pocket_h - 2, sup_h]);');
+			L.push('    if (sep_t > 0) for (i = [0:chips_per_row-2]) let(a = tol/2 + i*(chip_len + chip_gap) + chip_len + chip_gap/2 - sep_t/2)');
+			L.push('      if (rail_along_x) translate([a, -0.01, 0]) cube([sep_t, pocket_h + 0.02, sep_h]); else translate([-0.01, a, 0]) cube([pocket_w + 0.02, sep_t, sep_h]);');
+			L.push('  }');
 			L.push('  if (hole_d > 0) for (hp = hole_pos) translate([hp[0], hp[1], -1]) cylinder(d = hole_d, h = sup_h + 2);');
 			L.push('} }');
 		}
@@ -546,17 +596,32 @@ function params() {
 		p.marginX = p.wall; p.marginY = p.wall; p.fits = true;
 	}
 	p.bodyH = p.floor + p.depth;
-	p.totalH = p.bodyH + p.rimH;
+	// A lid is the same outline with no pockets: it keeps the tray's size, rim and recess settings so it seats
+	// on the rim of the top tray exactly like the next tray would, but it is one solid plate with a flat top.
+	p.lid = $('lidOn').checked;
+	if (p.lid) {
+		p.bodyH = parseFloat($('lidH').value); p.floor = p.bodyH; p.depth = 0; p.pedH = 0; p.hole = false;
+	}
+	p.hasRim = p.rimH > 0 && !p.lid;
+	p.totalH = p.bodyH + (p.hasRim ? p.rimH : 0);
 	// Nesting recess: a ring cut into the underside along the outer edge, rim + 0.3 high and rim_w + tol/2 wide.
 	// It must lie under the outer wall; its height may exceed the floor (the step then sits higher up the wall).
 	p.recessH = p.rimH > 0 ? Math.min(p.rimH + 0.3, p.bodyH - 1) : 0;
 	p.recessW = p.rimH > 0 ? p.rimW + p.tol / 2 : 0;
-	p.recessOK = p.recessW <= Math.min(p.marginX, p.marginY) + 1e-6;
+	p.recessOK = p.lid || p.recessW <= Math.min(p.marginX, p.marginY) + 1e-6;
 	p.recessChamfer = $('recessStyle').value === 'chamfer';
 	// The recess itself (0 .. recessH) must stay a straight inset of recessW, because that is the part that
 	// drops inside the rim of the tray below. The 90 deg ledge it leaves is chamfered away in a separate flare
 	// zone ABOVE it, where there is nothing to collide with - the rim of the tray below ends at rimH < recessH.
 	p.flareH = p.recessChamfer && p.recessH > 0 ? Math.max(0, Math.min(p.recessW, p.bodyH - p.recessH - 0.4)) : 0;
+	// A lid keeps its chamfer at 45° and at least LID_EDGE of upright edge on top — never a knife edge that a
+	// rubber band or a fingernail would wear down. When it is too thin for the whole chamfer, the chamfer is cut
+	// short and the lid simply ends that much inside the tray's outline (lidInset), instead of getting steeper.
+	p.lidInset = 0;
+	if (p.lid && p.recessChamfer && p.recessH > 0) {
+		p.flareH = Math.max(0, Math.min(p.recessW, p.bodyH - p.recessH - LID_EDGE));
+		p.lidInset = p.recessW - p.flareH;
+	}
 	p.insetTop = p.recessH + p.flareH;          // above this the body is at full width all round
 	// The outer wall stands on the inset base, so between the floor and insetTop it is thinner than the
 	// margin. Thinnest right at the floor, where the inset is still at or near its maximum.
@@ -565,22 +630,30 @@ function params() {
 	// below that it would hang in the air in front of the chamfer.
 	// The rim's outer face is flush with the wall, so the label may use it too: on a shallow tray that roughly
 	// doubles the height left for it. It stays visible when stacked — the tray above is inset over the rim.
-	p.labelOnRim = $('labelRim').checked && p.rimH > 0;
+	p.labelOnRim = $('labelRim').checked && p.hasRim;
 	p.labelTop = p.labelOnRim ? p.totalH : p.bodyH;
 	p.labelBand = p.labelTop - p.insetTop;
-	p.labelSize = Math.min(5, Math.max(1.2, p.labelBand * 0.85));
+	p.labelSize = Math.min(5, Math.max(0.5, p.labelBand * 0.85));   // never bigger than the band: OpenSCAD takes it as given
 	p.labelZ = p.insetTop + p.labelBand / 2;
 	p.labelDepth = Math.max(0.3, Math.min(0.8, p.wall / 3));   // never cut more than a third of the outer wall
+	// A lid can carry its label on top instead, on the large flat face: letters sized to the area, capped at
+	// 20 mm, with at least 8 mm left free along the sides. The chamfer is only a 2-odd mm ring round the edge,
+	// so under the label the lid is solid all the way down; an engraving only has to leave 1 mm beneath it.
+	p.labelTopFace = p.lid && $('labelPos').value === 'top';
+	p.topMaxW = p.outerW - 2 * Math.max(8, 0.08 * p.outerW);
+	p.topMaxH = Math.min(20, p.outerH * 0.5);
+	p.topRoom = p.topMaxW >= 5 && p.topMaxH >= 3;          // a tiny lid has no room for a label on top
+	p.topDepth = Math.min(0.8, p.bodyH - 1);
 	// The push-out hole is funnelled on the underside, the end you actually poke: it opens out by holeCham
 	// at 45 deg, so there is no sharp rim to catch a finger and the hole is easier to find blind. The other
 	// end sits inside the support the chip rests on, where a chamfer would only eat into that support.
 	p.holeCham = p.hole ? Math.max(0, Math.min(1.0, p.holeD / 6, p.floor / 3)) : 0;
 	p.labelStyle = $('labelStyle').value;
-	p.holeList = F.holes(p);
+	p.holeList = p.lid ? [] : F.holes(p);
 	// Finger notches: the wall between two horizontally adjacent pockets is slotted from the top down to the
 	// level the chip rests on, so it can be pinched from the side instead of only pushed up through the hole.
 	// Optional, and everything else is derived — slot length from the pocket, depth from the support height.
-	p.notch = $('notch').checked && p.fam !== 'dip' && p.fits && (p.cols > 1 || p.rows > 1);
+	p.notch = !p.lid && $('notch').checked && p.fam !== 'dip' && p.fits && (p.cols > 1 || p.rows > 1);
 	p.notchX = p.notch && p.cols > 1;   // slots in the walls between columns
 	p.notchY = p.notch && p.rows > 1;   // and between rows, so edge pockets are reachable too
 	p.notchR = p.notch ? Math.max(3, Math.min(8, Math.min(p.pocketW, p.pocketH) / 3)) : 0;   // half the slot length
@@ -589,6 +662,11 @@ function params() {
 }
 // How far the body outline is pulled in at height z: the straight nesting inset, then the flare back out.
 function insetAt(p, z) {
+	if (p.lid && p.recessH > 0) {                   // 45° from the plug outwards, then upright at lidInset
+		if (z < p.recessH - 1e-9) return p.recessW;
+		if (z < p.recessH + p.flareH - 1e-9) return p.recessW - (z - p.recessH);
+		return p.lidInset;
+	}
 	if (!(p.recessH > 0) || z >= p.recessH + p.flareH - 1e-9) return 0;
 	if (z < p.recessH - 1e-9) return p.recessW;
 	return p.recessW * (1 - (z - p.recessH) / p.flareH);
@@ -630,6 +708,10 @@ function labelScale(p, w, h) {
 	var maxW = Math.max(1, p.outerW - 2 * Math.max(p.wall, 2) - 2);
 	return Math.min(1, p.labelBand * 0.92 / Math.max(1e-6, h), maxW / Math.max(1e-6, w));
 }
+// On a lid's top face the glyphs are scaled up to the area instead of down to a band.
+function topScale(p, w, h) {
+	return Math.min(p.topMaxW / Math.max(1e-6, w), p.topMaxH / Math.max(1e-6, h));
+}
 function shapeFromPoints(pts, Ctor) {
 	var s = new (Ctor || THREE.Shape)();
 	s.moveTo(pts[0].x, pts[0].y);
@@ -643,7 +725,9 @@ function shapeFromPoints(pts, Ctor) {
 // of letters like O, A and R are islands in that plate — they rest on the wall behind them, so they are
 // emitted as their own small solids, the same way the notched slice is drawn as strips.
 function engravePlan(p) {
-	if (!labelFont || !p.label || p.labelStyle !== 'engraved' || !(p.labelBand > 0.5)) return null;
+	var top = !!p.labelTopFace;
+	if (!labelFont || !p.label || p.labelStyle !== 'engraved') return null;
+	if (top ? !(p.topRoom && p.topDepth >= 0.3) : !(p.labelBand > 0.5)) return null;
 	var shapes;
 	try { shapes = labelFont.generateShapes(p.label, 5); } catch (e) { return null; }
 	if (!shapes || !shapes.length) return null;
@@ -658,13 +742,13 @@ function engravePlan(p) {
 		polys.push({ outer: outer, holes: (sh.holes || []).map(function (h) { return h.getPoints(12); }).filter(function (h) { return h.length >= 3; }) });
 	});
 	if (!polys.length || maxX <= minX) return null;
-	var k = labelScale(p, maxX - minX, maxY - minY);
+	var k = top ? topScale(p, maxX - minX, maxY - minY) : labelScale(p, maxX - minX, maxY - minY);
 	var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
 	function xf(q) { return { x: (q.x - cx) * k, y: (q.y - cy) * k }; }
 	var gw = (maxX - minX) * k, gh = (maxY - minY) * k;
 	// Margin around the glyphs, but never so much that the patch leaves the band: on a shallow tray a fixed
 	// minimum pushed it down in front of the chamfer and up past the top.
-	var pad = Math.max(0.02, Math.min(1.0, (p.labelBand - gh) / 2 - 0.02));
+	var pad = top ? 1.0 : Math.max(0.02, Math.min(1.0, (p.labelBand - gh) / 2 - 0.02));
 	var hw = gw / 2 + pad, hh = gh / 2 + pad;
 	// The plate is cut into vertical strips, one glyph per strip. A single shape carrying every glyph as a
 	// hole triangulates with bridge edges that are traversed only once, which leaves the cap open — the same
@@ -707,13 +791,26 @@ function engravePlan(p) {
 		});
 		cutAt = right;
 	});
-	return { d: p.labelDepth, plates: plates, counters: counters, crowded: crowded,
+	return { d: top ? p.topDepth : p.labelDepth, plates: plates, counters: counters, crowded: crowded, top: top,
 		x0: p.outerW / 2 - hw, x1: p.outerW / 2 + hw,
-		z0: p.labelZ - hh, z1: p.labelZ + hh };
+		z0: p.labelZ - hh, z1: p.labelZ + hh,
+		y0: p.outerH / 2 - hh, y1: p.outerH / 2 + hh };
 }
 
 function labelMesh(p) {
 	if (!labelFont || !p.label || p.labelStyle !== 'raised') return null;   // engraved is built by engravePlan()
+	if (p.labelTopFace && !p.topRoom) return null;
+	if (p.labelTopFace) {                                // lying on the lid, read from above with the front at the bottom
+		var tg = new THREE.TextGeometry(p.label, { font: labelFont, size: 5, height: 0.8, curveSegments: 6 });
+		tg.computeBoundingBox(); var tb = tg.boundingBox;
+		var tk = topScale(p, tb.max.x - tb.min.x, tb.max.y - tb.min.y);
+		tg.scale(tk, tk, 1); tg.computeBoundingBox(); tb = tg.boundingBox;
+		tg.translate(-(tb.max.x + tb.min.x) / 2, -(tb.max.y + tb.min.y) / 2, 0);
+		var tm = new THREE.Mesh(tg, matLabelRaised);
+		tm.position.set(p.outerW / 2, p.outerH / 2, p.bodyH - 0.05);   // 0.05 into the top, 0.75 proud
+		tm.userData.previewOnly = false; tm.userData.isLabel = true;
+		return tm;
+	}
 	var geo = new THREE.TextGeometry(p.label, { font: labelFont, size: p.labelSize, height: 0.8, curveSegments: 6 });
 	geo.computeBoundingBox(); var bb = geo.boundingBox;
 	// Descenders and parentheses make the real height vary with the text, so fit the glyphs to the band that
@@ -724,13 +821,60 @@ function labelMesh(p) {
 	var m = new THREE.Mesh(geo, matLabelRaised);
 	m.rotation.x = Math.PI / 2;                          // text in the XZ plane, extruded towards -Y (out of the front wall)
 	// starts 0.05 mm inside the wall and stands 0.75 mm proud; sits above the chamfer — see params()
-	m.position.set(p.outerW / 2, 0.05, p.labelZ);
+	m.position.set(p.outerW / 2, (p.lid ? p.lidInset : 0) + 0.05, p.labelZ);
 	m.userData.previewOnly = false;
 	m.userData.isLabel = true;
 	return m;
 }
 
+// The lid: the tray's underside (straight nesting inset, then the chamfer or step back to full width) and a
+// solid plate above it with a flat top. An engraved label is cut the same way as on the trays — by leaving an
+// opening and putting back a plate "patch minus glyphs" in strips — on the front edge or in the top face,
+// where the top slice is the outline with ONE rectangular hole, which stays watertight.
+function buildLid(p) {
+	var g = new THREE.Group(), eng = engravePlan(p);
+	function outline(w, z0, z1) {
+		var X1 = p.outerW - w, Y1 = p.outerH - w, sh;
+		if (eng && !eng.top && Math.abs(w - p.lidInset) < 1e-6 && z1 > eng.z0 + 1e-9 && z0 < eng.z1 - 1e-9) {
+			sh = new THREE.Shape();
+			sh.moveTo(w, w); sh.lineTo(eng.x0, w); sh.lineTo(eng.x0, w + eng.d); sh.lineTo(eng.x1, w + eng.d);
+			sh.lineTo(eng.x1, w); sh.lineTo(X1, w); sh.lineTo(X1, Y1); sh.lineTo(w, Y1); sh.closePath();
+		} else sh = rect(w, w, X1 - w, Y1 - w);
+		if (eng && eng.top && z0 >= p.bodyH - eng.d - 1e-9)
+			sh.holes.push(rectPath(eng.x0, eng.y0, eng.x1 - eng.x0, eng.y1 - eng.y0));
+		return sh;
+	}
+	var bounds = [0, p.bodyH];
+	if (p.recessH > 0) {
+		bounds.push(p.recessH);
+		if (p.flareH > 0) for (var i = 1; i <= CHAMFER_STEPS; i++) bounds.push(p.recessH + p.flareH * i / CHAMFER_STEPS);
+	}
+	if (eng) { if (eng.top) bounds.push(p.bodyH - eng.d); else bounds.push(eng.z0, eng.z1); }
+	bounds = bounds.filter(function (v) { return v > -1e-9 && v < p.bodyH + 1e-9; })
+		.sort(function (a, b) { return a - b; })
+		.filter(function (v, i, a) { return i === 0 || v - a[i - 1] > 1e-6; });
+	for (var j = 0; j + 1 < bounds.length; j++) {
+		var z0 = bounds[j], z1 = bounds[j + 1], zA = j === 0 ? z0 : z0 - SINK;
+		g.add(extrude(outline(insetAt(p, z0), z0, z1), zA, z1 - zA, matGrey));
+	}
+	if (eng) {
+		var place = function (shape) {
+			var m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: eng.d + SINK, bevelEnabled: false, curveSegments: 12 }), matGrey);
+			if (eng.top) m.position.set(p.outerW / 2, p.outerH / 2, p.bodyH - eng.d - SINK);
+			else { m.rotation.x = Math.PI / 2; m.position.set(p.outerW / 2, p.lidInset + eng.d, p.labelZ); }
+			m.userData.isEngraving = true;
+			g.add(m);
+		};
+		eng.plates.forEach(place);
+		eng.counters.forEach(place);
+	}
+	var lm = labelMesh(p); if (lm) g.add(lm);
+	g.position.set(-p.outerW / 2, -p.outerH / 2, 0);
+	return g;
+}
+
 function buildTray(p) {
+	if (p.lid) return buildLid(p);
 	var g = new THREE.Group(), F = FAMILIES[p.fam];
 	var eng = engravePlan(p);
 	// True while this slice is inside the label patch, so the front wall must be left open there. Only ever
@@ -829,7 +973,7 @@ function buildTray(p) {
 	// 3. family-specific supports
 	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
-	if (p.rimH > 0) {
+	if (p.hasRim) {
 		// Sliced where an engraved label reaches up into it, and notched in that slice like the body below. The
 		// rim keeps a single hole (its inside) either way, so the notch does not cost it its watertightness.
 		var rb = [p.bodyH, p.totalH];
@@ -848,6 +992,7 @@ function buildTray(p) {
 			var m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: eng.d + SINK, bevelEnabled: false, curveSegments: 12 }), matGrey);
 			m.rotation.x = Math.PI / 2;                       // shape lies in XZ, extrudes towards -Y into the gap
 			m.position.set(p.outerW / 2, eng.d, p.labelZ);    // reaches SINK deeper than the notch it fills
+			m.userData.isEngraving = true;                    // lets the tests find the label patch
 			g.add(m);
 		};
 		eng.plates.forEach(place);
@@ -861,6 +1006,11 @@ function buildTray(p) {
 function volumeMm3(p) {
 	var v = p.outerW * p.outerH * p.floor;
 	var ring = p.outerW * p.outerH - (p.outerW - 2 * p.recessW) * (p.outerH - 2 * p.recessW);
+	if (p.lid) {
+		var ringAt = function (w) { return p.outerW * p.outerH - (p.outerW - 2 * w) * (p.outerH - 2 * w); };
+		return v - (p.recessH > 0 ? ring * p.recessH : 0) - (p.flareH > 0 ? ringAt((p.recessW + p.lidInset) / 2) * p.flareH : 0)
+			- ringAt(p.lidInset) * Math.max(0, p.bodyH - p.insetTop);
+	}
 	if (p.recessH > 0) v -= ring * p.recessH;
 	if (p.flareH > 0) v -= ring * p.flareH / 2;   // the flare removes roughly half the prism over its height
 	p.holeList.forEach(function (h) {
@@ -878,6 +1028,16 @@ function volumeMm3(p) {
 	return v;
 }
 
+// Only what can go wrong with a lid: it must seat on the rim below, and its label must have room.
+function lidWarnings(p, warn) {
+	if (p.rimH === 0) warn.push('Stacking rim height is 0, so the lid has no recess underneath and just lies on the tray. Set the rim height the trays use.');
+	if (p.rimH > 0 && p.recessChamfer && p.lidInset > 1e-6) warn.push('At this thickness the chamfer is cut short to keep a ' + LID_EDGE + ' mm upright edge on top, so the lid ends ' + p.lidInset.toFixed(2) + ' mm inside the tray\'s outline all round. From ' + (p.recessH + p.recessW + LID_EDGE).toFixed(2) + ' mm it is full width.');
+	if (p.rimH > 0 && p.bodyH - p.rimH < 2) warn.push('Only ' + (p.bodyH - p.rimH).toFixed(1) + ' mm of the lid stands above the rim, which is little to get hold of.');
+	if (p.rimH > 0 && !p.recessChamfer) warn.push('Square step: the lid edge sits flush on the tray below, so there is no gap to lever it off with, and the ledge needs support. The chamfer leaves a groove to get a fingernail into.');
+	if (p.labelStyle !== 'none' && p.label && p.labelTopFace && !p.topRoom) warn.push('This lid is too small for a label on top. Put it on the front edge instead.');
+	if (p.labelStyle !== 'none' && p.label && !p.labelTopFace && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of the lid\'s front edge is at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' step') + ', so the label is tiny. Put it on top, or make the lid thicker.');
+}
+
 var lastP = null;
 function rebuild() {
 	var p = params(); lastP = p; var s = p.sock, F = FAMILIES[p.fam];
@@ -886,7 +1046,15 @@ function rebuild() {
 		var fams = el.getAttribute('data-fam').split(' ');
 		el.style.display = (fams.indexOf(p.fam) >= 0 || (fams.indexOf('custom') >= 0 && s.id === 'custom')) ? 'grid' : 'none';
 	});
-	$('fixedRow').style.display = p.fixed ? 'grid' : 'none';
+	// lid mode on top of that: pocket-only controls go, lid-only ones appear
+	document.querySelectorAll('[data-lid]').forEach(function (el) {
+		var show = el.getAttribute('data-lid') === 'only' ? p.lid : !p.lid;
+		if (!show) el.style.display = 'none';
+		else if (!el.hasAttribute('data-fam')) el.style.display = el.classList.contains('row') ? 'grid' : '';
+	});
+	$('lidHV').textContent = parseFloat($('lidH').value).toFixed(1) + ' mm';
+	$('labelCaption').textContent = p.lid ? '4. Label on the lid' : '4. Label on the front wall';
+	$('fixedRow').style.display = p.fixed && !p.lid ? 'grid' : 'none';   // nothing to fit on a lid
 	if (p.fixed) {
 		// Wall value that makes the outer margin equal to the gap between pockets, per axis — the leftover
 		// otherwise all ends up in the outer margin. Shown as a number so it stays one slider, not another option.
@@ -918,11 +1086,14 @@ function rebuild() {
 	}
 	$('labelInput').disabled = p.labelStyle === 'none';
 	$('labelInput').parentNode.classList.toggle('dim', p.labelStyle === 'none');
-	var tr = F.table(p, s); $('tSupK').textContent = tr[0]; $('tSup').textContent = tr[1];
+	var tr = p.lid ? ['Lid', 'solid, ' + p.bodyH.toFixed(1) + ' mm, flat top'] : F.table(p, s);
+	$('tSupK').textContent = tr[0]; $('tSup').textContent = tr[1];
+	if (p.lid) $('tPocket').textContent = '— (the lid takes its size from these tray settings)';
 	$('tOuter').textContent = p.outerW.toFixed(1) + ' × ' + p.outerH.toFixed(1) + ' mm';
 	$('tH').textContent = p.totalH.toFixed(1) + ' mm';
 	$('tSrc').textContent = s.src;
 	var warn = [];
+	if (p.lid) lidWarnings(p, warn); else {
 	if (p.fixed && p.clamped) warn.push('That many pockets do not fit the ' + p.outerW + ' × ' + p.outerH + ' format, reduced to ' + p.rows + ' × ' + p.cols + '.');
 	if (p.fixed && !p.fits) warn.push('Even one pocket (' + p.pocketW + ' × ' + p.pocketH + ' mm) plus walls does not fit the ' + p.outerW + ' × ' + p.outerH + ' format — nothing is cut. Enlarge the format' + (p.fam === 'dip' ? ', reduce chips per channel or rotate the channels' : '') + '.');
 	if (p.rimH > 0 && p.fits && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
@@ -932,10 +1103,11 @@ function rebuild() {
 	if (p.labelStyle !== 'none' && p.label && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of front wall sits at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' recess') + ', so the label is shrunk to fit. Deepen the pockets, raise the floor' + (p.flareH > 0 ? ', or use the square step' : '') + (p.rimH > 0 && !p.labelOnRim ? ', or let it run up onto the rim' : '') + ' for a readable label.');
 	if (p.rimH > 0 && p.recessChamfer && p.flareH < p.recessW - 1e-6) warn.push('Body too shallow for a full chamfer: the flare above the recess is only ' + p.flareH.toFixed(2) + ' mm instead of ' + p.recessW.toFixed(2) + ' mm, so it is steeper than 45°. Increase the pocket depth or the floor.');
 	F.warnings(p, s, warn);
+	}
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
 	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
-	$('sCountK').textContent = p.fam === 'dip' ? 'Channels / chips' : 'Pockets';
-	$('sCount').textContent = (p.rows * p.cols) + (p.fam === 'dip' ? ' · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
+	$('sCountK').textContent = p.lid ? 'Piece' : p.fam === 'dip' ? 'Channels / chips' : 'Pockets';
+	$('sCount').textContent = p.lid ? 'lid' : (p.rows * p.cols) + (p.fam === 'dip' ? ' · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
 	$('sMass').textContent = '~' + (volumeMm3(p) / 1000 * PLA_DENSITY).toFixed(0) + ' g PLA';
 	if (!ok3d) return;
 	while (trayGroup.children.length) { var ch = trayGroup.children[0]; trayGroup.remove(ch); ch.traverse(function (m) { if (m.geometry) m.geometry.dispose(); }); }
@@ -1059,10 +1231,68 @@ function download(name, data, type) {
 	var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
 	setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
-function fileBase(p) { return 'tray_' + p.sock.id + '_' + p.rows + 'x' + p.cols + (p.fam === 'dip' ? 'x' + p.perRow : '') + (p.fixed ? '_' + p.outerW + 'x' + p.outerH : ''); }
+function fileBase(p) { return (p.lid ? 'lid_' : 'tray_') + p.sock.id + '_' + p.rows + 'x' + p.cols + (p.fam === 'dip' ? 'x' + p.perRow : '') + (p.fixed ? '_' + p.outerW + 'x' + p.outerH : ''); }
+
+function exportScadLid(p) {
+	var L = [], top = p.labelTopFace, raised = p.labelStyle === 'raised';
+	var size = p.labelSize, d = top ? Math.max(0.3, p.topDepth) : p.labelDepth;
+	if (top) {                                       // same area fit as the preview, taken from the loaded font
+		size = 10;
+		if (labelFont && p.label) try {
+			var bb = new THREE.ShapeGeometry(labelFont.generateShapes(p.label, 5)); bb.computeBoundingBox();
+			var b = bb.boundingBox; size = 5 * topScale(p, b.max.x - b.min.x, b.max.y - b.min.y);
+		} catch (e) { }
+	}
+	L.push('// Lid for a retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
+	L.push('// ' + settingsLine());
+	L.push('// Seats on the rim of the top tray of a stack of ' + p.sock.name + ' trays');
+	L.push('outer_w = ' + p.outerW + ';');
+	L.push('outer_h = ' + p.outerH + ';');
+	L.push('body_h = ' + p.bodyH + ';     // lid thickness');
+	L.push('rim_h = ' + p.rimH + ';      // rim of the trays this lid sits on');
+	L.push('rim_w = ' + p.rimW + ';');
+	L.push('tol = ' + p.tol + ';');
+	L.push('recess_h = rim_h > 0 ? min(rim_h + 0.3, body_h - 1) : 0;');
+	L.push('recess_w = rim_h > 0 ? rim_w + tol / 2 : 0;');
+	L.push('flare_h = ' + p.flareH.toFixed(2) + ';   // 45\u00b0 chamfer above the recess; 0 = square step');
+	L.push('lid_inset = ' + p.lidInset.toFixed(2) + ';   // > 0 when the lid is too thin for the whole chamfer: it ends that far inside the outline');
+	L.push('label = "' + (p.labelStyle === 'none' ? '' : p.label) + '";');
+	L.push('label_font = "Liberation Sans";');
+	L.push('label_size = ' + size.toFixed(2) + ';');
+	L.push('label_depth = ' + d.toFixed(2) + ';');
+	L.push('label_raised = ' + (raised ? 1 : 0) + ';');
+	L.push('label_on_top = ' + (top ? 1 : 0) + ';   // 1 = on the top face, 0 = on the front edge');
+	L.push('label_z = ' + p.labelZ.toFixed(2) + ';   // front edge only: centred above the chamfer');
+	L.push('');
+	L.push('module body() {');
+	L.push('  if (recess_h > 0) {');
+	L.push('    translate([recess_w, recess_w, 0]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, recess_h]);');
+	L.push('    if (flare_h > 0) hull() {');
+	L.push('      translate([recess_w, recess_w, recess_h]) cube([outer_w - 2*recess_w, outer_h - 2*recess_w, 0.01]);');
+	L.push('      translate([lid_inset, lid_inset, recess_h + flare_h - 0.01]) cube([outer_w - 2*lid_inset, outer_h - 2*lid_inset, 0.01]);');
+	L.push('    }');
+	L.push('    translate([lid_inset, lid_inset, recess_h + flare_h]) cube([outer_w - 2*lid_inset, outer_h - 2*lid_inset, body_h - recess_h - flare_h]);');
+	L.push('  } else cube([outer_w, outer_h, body_h]);');
+	L.push('}');
+	L.push('module txt(h) { linear_extrude(height = h) text(label, size = label_size, font = label_font, halign = "center", valign = "center"); }');
+	L.push('module label_front(y) { translate([outer_w/2, lid_inset + y, label_z]) rotate([90, 0, 0]) txt(label_depth); }');
+	L.push('module label_top(z, h) { translate([outer_w/2, outer_h/2, z]) txt(h); }');
+	L.push('');
+	L.push('difference() {');
+	L.push('  union() {');
+	L.push('    body();');
+	L.push('    if (len(label) > 0 && label_raised && label_on_top) label_top(body_h - 0.05, 0.8);');
+	L.push('    if (len(label) > 0 && label_raised && !label_on_top) label_front(0.05);');
+	L.push('  }');
+	L.push('  if (len(label) > 0 && !label_raised && label_on_top) label_top(body_h - label_depth, label_depth + 1);');
+	L.push('  if (len(label) > 0 && !label_raised && !label_on_top) label_front(label_depth);');
+	L.push('}');
+	download(fileBase(p) + '.scad', L.join('\n'), 'text/plain');
+}
 
 function exportScad() {
 	var p = params(), s = p.sock, L = [];
+	if (p.lid) return exportScadLid(p);
 	L.push('// Retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
 	L.push('// ' + settingsLine());
 	L.push('// ' + s.name + ' — ' + s.src);
