@@ -203,7 +203,7 @@
 					<option value="front">On the front edge</option>
 				</select>
 			</div>
-			<div></div>
+			<div class="check"><input type="checkbox" id="lidFlip" checked><label for="lidFlip">Export upside down, ready to print — the top lies on the bed, so the underside needs no support and the top gets the bed's finish (not with a raised label on top)</label></div>
 		</div>
 
 		<div class="spec-box">
@@ -329,10 +329,10 @@ var LID_EDGE = 1.0;
 function sepAbove(s) { return Math.floor((s.bodyMin || 3.56) / 2 * 10) / 10; }      // upright edge kept on top of a lid's chamfer, whatever its thickness
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-09-27.1';
+var BUILD = '2026-10-04.1';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
-	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep'];
+	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep', 'lidFlip'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -649,6 +649,11 @@ function params() {
 	// end sits inside the support the chip rests on, where a chamfer would only eat into that support.
 	p.holeCham = p.hole ? Math.max(0, Math.min(1.0, p.holeD / 6, p.floor / 3)) : 0;
 	p.labelStyle = $('labelStyle').value;
+	// Lid exports can come out upside down, top on the bed: the plug is then the narrow end at the top, so
+	// neither the step nor the chamfer overhangs, and the visible face gets the bed's finish. A raised label
+	// on top would end up under the lid, so that one combination stays the right way up.
+	p.lidFlipOK = !(p.labelTopFace && p.labelStyle === 'raised' && p.label);
+	p.lidFlip = p.lid && $('lidFlip').checked && p.lidFlipOK;
 	p.holeList = p.lid ? [] : F.holes(p);
 	// Finger notches: the wall between two horizontally adjacent pockets is slotted from the top down to the
 	// level the chip rests on, so it can be pinched from the side instead of only pushed up through the hole.
@@ -1033,7 +1038,8 @@ function lidWarnings(p, warn) {
 	if (p.rimH === 0) warn.push('Stacking rim height is 0, so the lid has no recess underneath and just lies on the tray. Set the rim height the trays use.');
 	if (p.rimH > 0 && p.recessChamfer && p.lidInset > 1e-6) warn.push('At this thickness the chamfer is cut short to keep a ' + LID_EDGE + ' mm upright edge on top, so the lid ends ' + p.lidInset.toFixed(2) + ' mm inside the tray\'s outline all round. From ' + (p.recessH + p.recessW + LID_EDGE).toFixed(2) + ' mm it is full width.');
 	if (p.rimH > 0 && p.bodyH - p.rimH < 2) warn.push('Only ' + (p.bodyH - p.rimH).toFixed(1) + ' mm of the lid stands above the rim, which is little to get hold of.');
-	if (p.rimH > 0 && !p.recessChamfer) warn.push('Square step: the lid edge sits flush on the tray below, so there is no gap to lever it off with, and the ledge needs support. The chamfer leaves a groove to get a fingernail into.');
+	if (p.rimH > 0 && !p.recessChamfer) warn.push('Square step: the lid edge sits flush on the tray below, so there is no gap to lever it off with' + (p.lidFlip ? '' : ', and printed this way up the ledge needs support') + '. The chamfer leaves a groove to get a fingernail into.');
+	if (!p.lidFlipOK && $('lidFlip').checked) warn.push('A raised label on top would end up under the lid, so this one is exported the right way up. Engrave the label, or put it on the front edge, to print the lid top down.');
 	if (p.labelStyle !== 'none' && p.label && p.labelTopFace && !p.topRoom) warn.push('This lid is too small for a label on top. Put it on the front edge instead.');
 	if (p.labelStyle !== 'none' && p.label && !p.labelTopFace && p.labelBand < 3.5) warn.push('Only ' + p.labelBand.toFixed(1) + ' mm of the lid\'s front edge is at full width above the underside' + (p.flareH > 0 ? ' chamfer' : ' step') + ', so the label is tiny. Put it on top, or make the lid thicker.');
 }
@@ -1086,6 +1092,8 @@ function rebuild() {
 	}
 	$('labelInput').disabled = p.labelStyle === 'none';
 	$('labelInput').parentNode.classList.toggle('dim', p.labelStyle === 'none');
+	$('lidFlip').disabled = !p.lidFlipOK;
+	$('lidFlip').parentNode.classList.toggle('dim', !p.lidFlipOK);
 	var tr = p.lid ? ['Lid', 'solid, ' + p.bodyH.toFixed(1) + ' mm, flat top'] : F.table(p, s);
 	$('tSupK').textContent = tr[0]; $('tSup').textContent = tr[1];
 	if (p.lid) $('tPocket').textContent = '— (the lid takes its size from these tray settings)';
@@ -1263,6 +1271,7 @@ function exportScadLid(p) {
 	L.push('label_raised = ' + (raised ? 1 : 0) + ';');
 	L.push('label_on_top = ' + (top ? 1 : 0) + ';   // 1 = on the top face, 0 = on the front edge');
 	L.push('label_z = ' + p.labelZ.toFixed(2) + ';   // front edge only: centred above the chamfer');
+	L.push('print_flipped = ' + ($('lidFlip').checked ? 1 : 0) + ';   // 1 = top down on the bed, no support needed (ignored with a raised label on top)');
 	L.push('');
 	L.push('module body() {');
 	L.push('  if (recess_h > 0) {');
@@ -1278,7 +1287,7 @@ function exportScadLid(p) {
 	L.push('module label_front(y) { translate([outer_w/2, lid_inset + y, label_z]) rotate([90, 0, 0]) txt(label_depth); }');
 	L.push('module label_top(z, h) { translate([outer_w/2, outer_h/2, z]) txt(h); }');
 	L.push('');
-	L.push('difference() {');
+	L.push('module lid() difference() {');
 	L.push('  union() {');
 	L.push('    body();');
 	L.push('    if (len(label) > 0 && label_raised && label_on_top) label_top(body_h - 0.05, 0.8);');
@@ -1287,6 +1296,10 @@ function exportScadLid(p) {
 	L.push('  if (len(label) > 0 && !label_raised && label_on_top) label_top(body_h - label_depth, label_depth + 1);');
 	L.push('  if (len(label) > 0 && !label_raised && !label_on_top) label_front(label_depth);');
 	L.push('}');
+	L.push('');
+	L.push('if (print_flipped && !(len(label) > 0 && label_raised && label_on_top))');
+	L.push('  translate([outer_w, 0, body_h]) rotate([0, 180, 0]) lid();   // turned over about Y, front stays in front');
+	L.push('else lid();');
 	download(fileBase(p) + '.scad', L.join('\n'), 'text/plain');
 }
 
@@ -1457,10 +1470,22 @@ function meshData(group, wantLabel) {
 	});
 	return { verts: verts, tris: tris };
 }
+// A lid is exported top down when p.lidFlip: turned over about the Y axis, so the front stays at the front
+// and the label reads the same way round in the slicer, and moved back onto the same footprint and z = 0.
+function printPose(g, p) {
+	if (!p.lidFlip) return;
+	g.updateMatrixWorld(true);
+	var box = new THREE.Box3();
+	g.traverse(function (o) { if (o.isMesh && !o.userData.previewOnly) box.expandByObject(o); });
+	g.rotation.y = Math.PI;
+	g.position.set(box.min.x + box.max.x, 0, box.min.z + box.max.z);
+	g.updateMatrixWorld(true);
+}
 function exportThreeMF() {
 	if (!ok3d) { alert('The preview is not running and the 3MF is built from it. Use the OpenSCAD export.'); return; }
 	var p = params(), g = buildTray(p);
 	g.position.set(0, 0, 0);
+	printPose(g, p);
 	// Body and raised label are two meshes with their own base material, wrapped by a third object that
 	// references both as <components>. That is what makes a slicer load them as ONE object with two parts
 	// — the dual-colour arrangement — instead of two loose objects it has to ask about. One filament
@@ -1512,6 +1537,7 @@ function exportStl() {
 	var p = params();
 	var g = buildTray(p); g.position.set(0, 0, 0);
 	g.children.filter(function (m) { return m.userData.previewOnly; }).forEach(function (m) { g.remove(m); });
+	printPose(g, p);
 	g.updateMatrixWorld(true);
 	var exporter = new THREE.STLExporter();
 	var buf = exporter.parse(g, { binary: true });
