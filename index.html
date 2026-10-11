@@ -92,7 +92,7 @@
 <body>
 <div class="wrapper">
 	<h1>💾 Retro CPU Tray Generator</h1>
-	<p class="subtitle">Stackable 3D-printable trays for PGA / LGA processors, QFP / PLCC chips and DIP chips · WebGL preview · OpenSCAD, STL and 3MF export</p>
+	<p class="subtitle">Stackable 3D-printable trays for PGA / LGA processors, QFP / PLCC chips, DIP chips and memory modules · WebGL preview · OpenSCAD, STL and 3MF export</p>
 	<div id="err"></div>
 
 	<div class="form-panel">
@@ -111,6 +111,37 @@
 		<div class="row" data-fam="dip">
 			<div class="field"><label for="perRow">Chips per channel <span class="val" id="perRowV">4</span></label><input type="range" id="perRow" min="1" max="12" value="4"></div>
 			<div class="field"><label for="chipGap">Gap between chips <span class="val" id="chipGapV">1.5 mm</span></label><input type="range" id="chipGap" min="0.5" max="4" step="0.25" value="1.5"></div>
+		</div>
+		<div class="row" data-fam="mem">
+			<div class="field"><label for="memSided">Modules</label>
+				<select id="memSided" title="Sets the default spacing between modules. Fine-tune it with the slider below.">
+					<option value="1" selected>Single-sided (chips on one side)</option>
+					<option value="2">Double-sided (chips on both sides)</option>
+				</select>
+			</div>
+			<div class="field"><label for="memCount">Modules per channel <span class="val" id="memCountV">12</span></label><input type="range" id="memCount" min="1" max="40" value="12"></div>
+		</div>
+		<div class="row" data-fam="mem">
+			<div class="field"><label for="memPitch">Module spacing (centre to centre) <span class="val" id="memPitchV">6.0 mm</span></label><input type="range" id="memPitch" min="2.5" max="15" step="0.1" value="6"></div>
+			<div class="field"><label for="memH">Module height <span class="val" id="memHV">14.0 mm</span></label><input type="range" id="memH" min="8" max="45" step="0.1" value="14"></div>
+		</div>
+		<div class="row" data-fam="mem">
+			<div class="field"><label for="grooveW">Groove width (PCB + play) <span class="val" id="grooveWV">1.50 mm</span></label><input type="range" id="grooveW" min="1" max="2.5" step="0.05" value="1.5"></div>
+			<div class="field"><label for="grooveD">Groove depth into the end wall <span class="val" id="grooveDV">2.00 mm</span></label><input type="range" id="grooveD" min="1" max="4" step="0.25" value="2"></div>
+		</div>
+		<div class="row" data-fam="mem" data-pkg="sipp30">
+			<div class="field"><label for="memLen">Module length <span class="val">mm</span></label><input type="number" id="memLen" value="89.15" step="0.05" min="50" max="140" title="SIPPs come in at least two lengths: on a SIMM-sized board (Intel, measured 88.8) or on a shorter dedicated board (Mitsubishi 30N5: 78.9). Enter yours."></div>
+			<div></div>
+		</div>
+		<div class="row" data-fam="mem">
+			<div class="field"><label for="memSup">Module stands on</label>
+				<select id="memSup" title="End feet: only the bare PCB ends rest, the contacts float — works for every module, SIPP pins included.&#10;Centre hump: like the original trays; wide enough to bridge the centre key notch of SIMM72 and DIMM.&#10;Flat floor: the whole contact edge rests on the floor.">
+					<option value="ends" selected>Feet under the bare PCB ends</option>
+					<option value="hump">Hump in the middle</option>
+					<option value="none">Flat floor</option>
+				</select>
+			</div>
+			<div class="check"><input type="checkbox" id="memHoriz"><label for="memHoriz">Modules along the width (rotate 90°)</label></div>
 		</div>
 		<div class="row">
 			<div class="field"><label for="rows">2. Rows <span class="val" id="rowsV">2</span></label><input type="range" id="rows" min="1" max="12" value="2"></div>
@@ -132,12 +163,12 @@
 			<input type="range" id="tol" min="0" max="2" step="0.05" value="0.5">
 		</div>
 		<div class="row">
-			<div class="field"><label for="wall">Wall between pockets <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="8" step="0.5" value="3"></div>
+			<div class="field"><label for="wall"><span id="wallK">Wall between pockets</span> <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="8" step="0.5" value="3"></div>
 			<div class="field" data-lid="hide"><label for="floor">Floor <span class="val" id="floorV">2.5 mm</span></label><input type="range" id="floor" min="1" max="6" step="0.5" value="2.5"></div>
 		</div>
 		<div class="row" data-lid="hide">
 			<div class="field"><label for="depth">Pocket depth <span class="val" id="depthV">8.5 mm</span></label><input type="range" id="depth" min="2" max="16" step="0.5" value="8.5"></div>
-			<div class="field"><label for="ped">Support height <span class="val" id="pedV">4.0 mm</span></label><input type="range" id="ped" min="0" max="8" step="0.5" value="4"></div>
+			<div class="field"><label for="ped"><span id="pedK">Support height</span> <span class="val" id="pedV">4.0 mm</span></label><input type="range" id="ped" min="0" max="8" step="0.5" value="4"></div>
 		</div>
 		<div class="row" data-fam="pga" data-lid="hide">
 			<div class="check"><input type="checkbox" id="pedOn" checked><label for="pedOn">Central pedestal (package rests on its pin-free centre)</label></div>
@@ -226,7 +257,7 @@
 		</div>
 		<div class="doc-note">Trays nest by a top rim and a matching bottom recess; heights may differ between trays, only the outer format must match.
 			PGA packages rest on a central pedestal inside the pin-free centre, or on an edge ledge / hollow pedestal where the underside carries capacitors.
-			QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube.
+			QFP and PLCC chips rest on a pad under the body so the leads float, as in JEDEC shipping trays. DIP chips lie on a centre rail between the pin rows, like in a shipping tube. Memory modules stand upright in grooves in the end walls, like in the original module trays, on feet under the bare PCB ends or on a centre hump.
 			Every pocket has a push-out hole so one chip can be lifted out of a full tray, and the nesting step can be chamfered so nothing needs support or left square if you would rather add support in the slicer. Dimensions come from the datasheets and JEDEC outlines listed per package.</div>
 	</div>
 
@@ -307,7 +338,16 @@ var PACKAGES = [
 	{ id: 'dip32w', fam: 'dip', name: 'DIP-32 0.6" wide (27C010, 28C256, flash)',     span: 15.9, len: 42.3, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 1.665"' },
 	{ id: 'dip40w', fam: 'dip', name: 'DIP-40 0.6" wide (8086, 8088, Z80, 8042 KBC, 8237)', span: 15.9, len: 53.34, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 2.100"' },
 	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 63.0, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 2.480"' },
-	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, bodyMin: 3.56, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' }
+	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, bodyMin: 3.56, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' },
+	{ group: 'Memory modules (standing in grooves)' },
+	{ id: 'simm30', fam: 'mem', name: 'SIMM 30-pin (3.5", 8/9-bit FPM)',  len: 89.15, hDef: 14,   pitch1: 6.0, pitch2: 10.0, foot: 1.5,
+	  src: 'Micron MT2D18 (Rev. 2/95) outline: length 88.65–89.15, PCB 1.19–1.37, 5.08 max over chips (single-sided), pin-1 corner notch 2.03 × 6.35, height 12.45–12.95 on that module. Measured here: 4.5–4.7 over chips, heights 12.4–20.6, first contact ~6 mm from each end' },
+	{ id: 'sipp30', fam: 'mem', name: 'SIPP 30-pin (pins instead of contacts; length adjustable)', len: 89.15, lenEdit: true, hDef: 16, pitch1: 6.0, pitch2: 10.0, foot: 6.0, pinLen: 5.0,
+	  src: 'Two board lengths exist: SIMM-sized (Intel SIPP measured 88.8 × 16, pins 5.0 below the edge, 5.0 over chips and pin solder) and the shorter Mitsubishi type 30N5 (MH25609JA, 1987 IC Memories databook p.54: 78.9 ± 0.2 × 18 max, pins ≥ 2.8 below the board, 5.08 over chips). Default is the SIMM size; enter the length of yours. Stands on end feet so the pins float' },
+	{ id: 'simm72', fam: 'mem', name: 'SIMM 72-pin (4.25", 32/36-bit FPM / EDO)', len: 108.2, hDef: 16.5, pitch1: 6.0, pitch2: 10.0, foot: 1.5,
+	  src: 'Micron MT8D432 / MT16D832 (1998) outline: length 107.70–108.20, PCB 1.19–1.37, 5.08 max single-sided / 8.98 max double-sided, pin-1 corner notch 2.03 × 6.35, first contact ≥ 5.97 from the end, height 25.15–25.65 on that module. Measured here: 4.6 / 7.5–8.2 over chips, heights 16–34' },
+	{ id: 'dimm168', fam: 'mem', name: 'DIMM 168-pin (5.25", SDRAM)',    len: 133.5, hDef: 29,   pitch1: 4.0, pitch2: 5.0, foot: 1.5, horiz: true,
+	  src: 'Micron MT8/16LSDTxx64A Fig. 11/12: length 133.20–133.50, height 34.80–35.05 (low profile 28.42–28.73), PCB 1.17–1.37, 3.18 max single-sided / 3.99 max double-sided, contacts span 115.57 (~8.9 mm bare at each end), key notches 2.0 wide in the middle and 24.5 from one end. Measured here: 2.3 over chips single-sided' }
 ];
 var PLA_DENSITY = 1.24; // g/cm3
 var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
@@ -322,6 +362,11 @@ var HOLE_STEPS = 2, HOLE_SEG = 12;
 // anything a printer resolves but far above any merging tolerance a slicer uses.
 var SINK = 0.01;
 var LID_EDGE = 1.0;
+// Memory modules stand in grooves cut into the end walls. The feet under the PCB ends reach MEM_FOOT past the
+// module end: beyond the 2.03 mm pin-1 corner notch of a SIMM, short of the first contact (SIMM72 ≥ 5.97 mm in
+// per Micron, SIMM30 ~6 measured, DIMM ~8.9). The hump is MEM_HUMP wide so it bridges the centre key notch (SIMM72 3.15, DIMM 2.0).
+// MEM_HEAD keeps the module tops below the tray top, where the next tray of the stack sits.
+var MEM_FOOT = 3.5, MEM_HUMP = 7, MEM_HEAD = 0.5;
 // DIP body thickness minimum (A2) per row spacing, from Microchip DS00049AF, whose PDIP tables cite JEDEC MS-001
 // (300 mil: 2.92–3.68 mm) and MS-011 (600 mil: 3.56–4.06 mm). The 0.9" DIP-64 has no table on file and takes
 // the 600 mil value. A separator ends at half the THINNEST body above the rail, rounded down to 0.1 mm, so it
@@ -329,10 +374,11 @@ var LID_EDGE = 1.0;
 function sepAbove(s) { return Math.floor((s.bodyMin || 3.56) / 2 * 10) / 10; }      // upright edge kept on top of a lid's chamfer, whatever its thickness
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-10-04.1';
+var BUILD = '2026-10-11.1';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
-	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep', 'lidFlip'];
+	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep', 'lidFlip',
+	'memSided', 'memCount', 'memPitch', 'memH', 'grooveW', 'grooveD', 'memSup', 'memHoriz', 'memLen'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -564,6 +610,115 @@ var FAMILIES = {
 			L.push('  if (hole_d > 0) for (hp = hole_pos) translate([hp[0], hp[1], -1]) cylinder(d = hole_d, h = sup_h + 2);');
 			L.push('} }');
 		}
+	},
+	mem: {
+		always: true,          // the groove teeth are there even with no support underneath
+		defaults: function (s, famChanged) {
+			$('memH').value = s.hDef; $('memPitch').value = $('memSided').value === '2' ? s.pitch2 : s.pitch1;
+			$('ped').value = s.foot; $('memHoriz').checked = !!s.horiz;
+			if (s.pinLen) $('memSup').value = 'ends';
+			if (famChanged) { $('rows').value = 1; $('cols').value = 1; $('memCount').value = 12; }
+		},
+		pocket: function (s, p) {
+			p.memCount = parseInt($('memCount').value); p.pitch = parseFloat($('memPitch').value);
+			p.memHoriz = $('memHoriz').checked; p.memClamped = false;
+			p.grooveW = parseFloat($('grooveW').value); p.grooveD = parseFloat($('grooveD').value);
+			p.modH = parseFloat($('memH').value);
+			// a SIPP has pins along the bottom edge, so it can only stand on its bare ends
+			p.memSup = s.pinLen ? 'ends' : $('memSup').value;
+			p.footH = p.memSup === 'none' ? 0 : parseFloat($('ped').value);
+			p.footReach = Math.max(MEM_FOOT, p.grooveD + 0.5);
+			// In a fixed format, drop modules until one channel fits across.
+			if ($('fixedOn').checked) {
+				var avail = (p.memHoriz ? parseFloat($('fixedH').value) : parseFloat($('fixedW').value)) - 2 * p.wall - p.tol;
+				var maxN = Math.max(1, Math.floor(avail / p.pitch));
+				if (p.memCount > maxN) { p.memCount = maxN; p.memClamped = true; }
+			}
+			var across = p.memCount * p.pitch;
+			p.modLen = s.lenEdit ? (parseFloat($('memLen').value) || s.len) : s.len;
+			if (p.memHoriz) { p.pkgW = p.modLen; p.pkgH = across; } else { p.pkgW = across; p.pkgH = p.modLen; }
+			// The depth is not a free choice here: the module has to stand below the top, where the next tray sits.
+			p.depth = p.footH + p.modH + MEM_HEAD;
+			p.pedH = p.footH;
+			p.hole = false;
+		},
+		// Pocket-local frame: a = along the modules (0 .. L), b = across them (0 .. B).
+		frame: function (p) {
+			return p.memHoriz ? { L: p.pocketW, B: p.pocketH } : { L: p.pocketH, B: p.pocketW };
+		},
+		grooves: function (p) {          // groove centres across the channel
+			var out = [];
+			for (var i = 0; i < p.memCount; i++) out.push(p.tol / 2 + p.pitch / 2 + i * p.pitch);
+			return out;
+		},
+		meshes: function (p, o, g) {
+			var F = FAMILIES.mem, f = F.frame(p), gs = F.grooves(p), hw = p.grooveW / 2;
+			function box(a0, a1, b0, b1, z0, dz, mat) {
+				var r = p.memHoriz ? rect(o.x + a0, o.y + b0, a1 - a0, b1 - b0) : rect(o.x + b0, o.y + a0, b1 - b0, a1 - a0);
+				g.add(extrude(r, z0, dz, mat));
+			}
+			// Teeth between the grooves, along both end walls, from the floor to the top. They reach SINK into the
+			// end wall and into the side walls, so they fuse with the body instead of touching it.
+			[[-SINK, p.grooveD], [f.L - p.grooveD, f.L + SINK]].forEach(function (end) {
+				var at = -SINK;
+				gs.concat([f.B + SINK + hw]).forEach(function (c, i) {
+					var to = i < gs.length ? c - hw : f.B + SINK;
+					if (to - at > 0.05) box(end[0], end[1], at, to, p.floor - SINK, p.depth + SINK, matGrey);
+					at = c + hw;
+				});
+			});
+			if (p.footH > 0) {
+				if (p.memSup === 'hump') box(f.L / 2 - MEM_HUMP / 2, f.L / 2 + MEM_HUMP / 2, -SINK, f.B + SINK, p.floor - SINK, p.footH + SINK, matSup);
+				else {
+					var reach = p.tol / 2 + p.footReach;
+					box(-SINK, reach, -SINK, f.B + SINK, p.floor - SINK, p.footH + SINK, matSup);
+					box(f.L - reach, f.L + SINK, -SINK, f.B + SINK, p.floor - SINK, p.footH + SINK, matSup);
+				}
+			}
+		},
+		holes: function (p) { return []; },
+		area: function (p) { return 0; },
+		volume: function (p) {       // per channel: teeth to the top, feet or hump at support height
+			var f = FAMILIES.mem.frame(p);
+			var v = 2 * Math.max(0, f.B - p.memCount * p.grooveW) * p.grooveD * p.depth;
+			if (p.footH > 0) v += (p.memSup === 'hump' ? MEM_HUMP : 2 * (p.tol / 2 + p.footReach)) * f.B * p.footH;
+			return v;
+		},
+		table: function (p, s) {
+			var sup = p.memSup === 'hump' ? 'hump ' + MEM_HUMP + ' mm wide' : p.memSup === 'ends' ? 'feet ' + p.footReach.toFixed(1) + ' mm in from each module end' : 'flat floor';
+			return ['Grooves', p.memCount + ' × ' + p.grooveW.toFixed(2) + ' wide, ' + p.grooveD.toFixed(2) + ' deep, every ' + p.pitch.toFixed(1) + ' mm · ' + sup + (p.footH > 0 ? ', ' + p.footH.toFixed(1) + ' mm high' : '')];
+		},
+		warnings: function (p, s, w) {
+			if (p.memClamped) w.push('Modules per channel reduced to ' + p.memCount + ' so the channel fits the fixed format' + (p.memHoriz ? '' : ' (try "Modules along the width")') + '.');
+			if (s.pinLen && $('memSup').value !== 'ends') w.push('A SIPP has pins along the bottom edge, so it always stands on the end feet.');
+			if (s.pinLen && p.footH < s.pinLen + 0.5) w.push('Feet lower than the SIPP pins (' + s.pinLen + ' mm) plus 0.5 mm: the pin tips would touch the floor.');
+			if (p.grooveW < 1.4) w.push('Groove narrower than 1.4 mm: module PCBs are 1.0–1.37 mm thick, and a printed slot comes out a little narrower than drawn.');
+			if (p.pitch - p.grooveW < 0.8) w.push('The teeth between the grooves would be only ' + (p.pitch - p.grooveW).toFixed(2) + ' mm thick. Increase the spacing or narrow the grooves.');
+			if (p.footReach > 5) w.push('With grooves this deep the feet reach ' + p.footReach.toFixed(1) + ' mm under the module, past the first contacts of a SIMM 72 (5.97 mm in).');
+			if (p.memSup === 'none' && !s.pinLen) w.push('Modules stand on their contact edge on the floor.');
+		},
+		scad: function (p, L) {
+			var f = FAMILIES.mem.frame(p);
+			L.push('hole_d = 0;');
+			L.push('mod_n = ' + p.memCount + ';         // modules per channel');
+			L.push('pitch = ' + p.pitch + ';        // module spacing, centre to centre');
+			L.push('groove_w = ' + p.grooveW + ';     // groove width (PCB + play)');
+			L.push('groove_d = ' + p.grooveD + ';     // groove depth into each end wall');
+			L.push('along_x = ' + (p.memHoriz ? 1 : 0) + ';        // 1 = modules lie along the tray width');
+			L.push('sup = "' + p.memSup + '";      // "ends" = feet under the bare PCB ends, "hump" = centre hump, "none"');
+			L.push('foot_reach = ' + (p.tol / 2 + p.footReach).toFixed(2) + ';  // feet: from the end wall under the module');
+			L.push('hump_w = ' + MEM_HUMP + ';');
+			L.push('ch_l = ' + f.L.toFixed(2) + ';  ch_b = ' + f.B.toFixed(2) + ';   // channel along / across the modules');
+			L.push('module ab(a0, a1, b0, b1, h) { if (along_x) translate([a0, b0, 0]) cube([a1 - a0, b1 - b0, h]); else translate([b0, a0, 0]) cube([b1 - b0, a1 - a0, h]); }');
+			L.push('module support() {');
+			L.push('  difference() {          // teeth = the end walls of the channel with the grooves cut out');
+			L.push('    union() { ab(-0.01, groove_d, -0.01, ch_b + 0.01, depth); ab(ch_l - groove_d, ch_l + 0.01, -0.01, ch_b + 0.01, depth); }');
+			L.push('    for (i = [0:mod_n-1]) let(c = tol/2 + pitch/2 + i*pitch) ab(-1, ch_l + 1, c - groove_w/2, c + groove_w/2, depth + 1);');
+			L.push('  }');
+			L.push('  if (sup_h > 0 && sup == "ends") { ab(-0.01, foot_reach, -0.01, ch_b + 0.01, sup_h); ab(ch_l - foot_reach, ch_l + 0.01, -0.01, ch_b + 0.01, sup_h); }');
+			L.push('  if (sup_h > 0 && sup == "hump") ab(ch_l/2 - hump_w/2, ch_l/2 + hump_w/2, -0.01, ch_b + 0.01, sup_h);');
+			L.push('}');
+		}
 	}
 };
 
@@ -658,7 +813,7 @@ function params() {
 	// Finger notches: the wall between two horizontally adjacent pockets is slotted from the top down to the
 	// level the chip rests on, so it can be pinched from the side instead of only pushed up through the hole.
 	// Optional, and everything else is derived — slot length from the pocket, depth from the support height.
-	p.notch = !p.lid && $('notch').checked && p.fam !== 'dip' && p.fits && (p.cols > 1 || p.rows > 1);
+	p.notch = !p.lid && $('notch').checked && (p.fam === 'pga' || p.fam === 'qfp') && p.fits && (p.cols > 1 || p.rows > 1);
 	p.notchX = p.notch && p.cols > 1;   // slots in the walls between columns
 	p.notchY = p.notch && p.rows > 1;   // and between rows, so edge pockets are reachable too
 	p.notchR = p.notch ? Math.max(3, Math.min(8, Math.min(p.pocketW, p.pocketH) / 3)) : 0;   // half the slot length
@@ -976,7 +1131,7 @@ function buildTray(p) {
 			zA, z1 - zA, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
 	}
 	// 3. family-specific supports
-	if (p.pedH > 0 && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
+	if ((p.pedH > 0 || F.always) && p.fits) for (var r2 = 0; r2 < p.rows; r2++) for (var c2 = 0; c2 < p.cols; c2++) F.meshes(p, pocketOrigin(p, r2, c2), g);
 	// 4. stacking rim
 	if (p.hasRim) {
 		// Sliced where an engraved label reaches up into it, and notched in that slice like the body below. The
@@ -1028,7 +1183,8 @@ function volumeMm3(p) {
 	if (p.notchR > 0) v -= (p.notchX ? p.rows * (p.cols - 1) : 0) * p.wall * 2 * p.notchR * p.notchD
 		+ (p.notchY ? p.cols * (p.rows - 1) : 0) * p.wall * 2 * p.notchR * p.notchD;
 	v += (p.outerW * p.outerH - p.rows * p.cols * p.pocketW * p.pocketH) * p.depth;
-	if (p.pedH > 0) v += p.rows * p.cols * FAMILIES[p.fam].area(p) * p.pedH;
+	if (FAMILIES[p.fam].volume) v += p.rows * p.cols * FAMILIES[p.fam].volume(p);
+	else if (p.pedH > 0) v += p.rows * p.cols * FAMILIES[p.fam].area(p) * p.pedH;
 	if (p.rimH > 0) v += (p.outerW * p.outerH - (p.outerW - 2 * p.rimW) * (p.outerH - 2 * p.rimW)) * p.rimH;
 	return v;
 }
@@ -1050,7 +1206,8 @@ function rebuild() {
 	// show only the rows that belong to this family (data-fam="pga qfp" = several)
 	document.querySelectorAll('[data-fam]').forEach(function (el) {
 		var fams = el.getAttribute('data-fam').split(' ');
-		el.style.display = (fams.indexOf(p.fam) >= 0 || (fams.indexOf('custom') >= 0 && s.id === 'custom')) ? 'grid' : 'none';
+		var pkgOnly = el.getAttribute('data-pkg');   // row for one package of the family only
+		el.style.display = ((fams.indexOf(p.fam) >= 0 && (!pkgOnly || pkgOnly === s.id)) || (fams.indexOf('custom') >= 0 && s.id === 'custom')) ? 'grid' : 'none';
 	});
 	// lid mode on top of that: pocket-only controls go, lid-only ones appear
 	document.querySelectorAll('[data-lid]').forEach(function (el) {
@@ -1069,6 +1226,9 @@ function rebuild() {
 		var fits = p.fam === 'dip'
 			? '<strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> channels of ' + p.perRow + ' = <strong>'
 				+ (p.maxRows * p.maxCols * p.perRow) + '</strong> chips'
+			: p.fam === 'mem'
+			? '<strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> channels of ' + p.memCount + ' = <strong>'
+				+ (p.maxRows * p.maxCols * p.memCount) + '</strong> modules'
 			: '<strong>' + p.maxRows + ' × ' + p.maxCols + '</strong> pockets';
 		$('fixedInfo').innerHTML = 'Fits max. ' + fits + ' · outer margin '
 			+ p.marginX.toFixed(1) + ' / ' + p.marginY.toFixed(1) + ' mm<br>even spacing at wall '
@@ -1077,13 +1237,27 @@ function rebuild() {
 	}
 	$('rowsV').textContent = p.rows; $('colsV').textContent = p.cols;
 	$('tolV').textContent = '+' + p.tol.toFixed(2) + ' mm'; $('wallV').textContent = p.wall.toFixed(1) + ' mm';
+	// With a single pocket there is nothing between pockets: the slider is the outer wall, and in a fixed format
+	// only its minimum, since the format decides what is left over around the pocket.
+	$('wallK').textContent = p.rows * p.cols > 1 ? 'Wall between pockets' : p.fixed ? 'Outer wall (minimum)' : 'Outer wall';
 	$('floorV').textContent = p.floor.toFixed(1) + ' mm'; $('depthV').textContent = p.depth.toFixed(1) + ' mm';
-	$('pedV').textContent = p.pedH.toFixed(1) + ' mm'; $('rimV').textContent = p.rimH.toFixed(1) + ' mm';
+	$('pedV').textContent = (p.fam === 'mem' ? parseFloat($('ped').value) : p.pedH).toFixed(1) + ' mm';
+	$('pedK').textContent = p.fam === 'mem' ? (p.memSup === 'hump' ? 'Hump height' : 'Foot height') : 'Support height';
+	$('ped').disabled = p.fam === 'mem' && p.memSup === 'none';
+	$('depth').disabled = p.fam === 'mem';                 // follows the module height there
+	if (p.fam === 'mem') $('depthV').textContent = p.depth.toFixed(1) + ' mm (auto)'; $('rimV').textContent = p.rimH.toFixed(1) + ' mm';
 	if (p.fam === 'pga') { $('pedSizeV').textContent = p.pedSize + ' mm'; $('ledgeV').textContent = p.ledge.toFixed(2) + ' mm'; }
 	if (p.fam === 'qfp') { $('insetV').textContent = p.inset.toFixed(2) + ' mm'; }
 	$('holeDV').textContent = (p.holeD || 0) + ' mm' + (p.hole && p.holeD < parseFloat($('holeD').value) ? ' (max for support)' : '');
 	if (p.fam === 'dip') { $('perRowV').textContent = p.perRowClamped ? p.perRow + ' (set ' + $('perRow').value + ', limited by format)' : p.perRow; $('chipGapV').textContent = p.chipGap.toFixed(2) + ' mm'; $('railWV').textContent = p.railW.toFixed(1) + ' mm'; }
-	if (p.fam === 'dip') {
+	if (p.fam === 'mem') {
+		$('memCountV').textContent = p.memClamped ? p.memCount + ' (set ' + $('memCount').value + ', limited by format)' : p.memCount;
+		$('memPitchV').textContent = p.pitch.toFixed(1) + ' mm'; $('memHV').textContent = p.modH.toFixed(1) + ' mm';
+		$('grooveWV').textContent = p.grooveW.toFixed(2) + ' mm'; $('grooveDV').textContent = p.grooveD.toFixed(2) + ' mm';
+		$('memSup').disabled = !!s.pinLen;
+		$('tPkg').textContent = p.modLen + ' mm long · ' + p.modH.toFixed(1) + ' mm high';
+		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm channel (' + p.memCount + ' modules)';
+	} else if (p.fam === 'dip') {
 		$('tPkg').textContent = s.span + ' × ' + s.len + ' mm per chip · ' + s.rowSp + ' mm row spacing';
 		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm channel (' + p.perRow + ' chips)';
 	} else {
@@ -1114,8 +1288,9 @@ function rebuild() {
 	}
 	$('pedWarn').innerHTML = warn.map(function (w) { return '⚠ ' + w; }).join('<br>'); $('pedWarn').style.display = warn.length ? 'block' : 'none';
 	$('sSize').textContent = p.outerW.toFixed(0) + ' × ' + p.outerH.toFixed(0) + ' × ' + p.totalH.toFixed(1) + ' mm';
-	$('sCountK').textContent = p.lid ? 'Piece' : p.fam === 'dip' ? 'Channels / chips' : 'Pockets';
-	$('sCount').textContent = p.lid ? 'lid' : (p.rows * p.cols) + (p.fam === 'dip' ? ' · ' + (p.rows * p.cols * p.perRow) + ' chips' : ' pcs');
+	$('sCountK').textContent = p.lid ? 'Piece' : p.fam === 'dip' ? 'Channels / chips' : p.fam === 'mem' ? 'Channels / modules' : 'Pockets';
+	$('sCount').textContent = p.lid ? 'lid' : (p.rows * p.cols) + (p.fam === 'dip' ? ' · ' + (p.rows * p.cols * p.perRow) + ' chips'
+		: p.fam === 'mem' ? ' · ' + (p.rows * p.cols * p.memCount) + ' modules' : ' pcs');
 	$('sMass').textContent = '~' + (volumeMm3(p) / 1000 * PLA_DENSITY).toFixed(0) + ' g PLA';
 	if (!ok3d) return;
 	while (trayGroup.children.length) { var ch = trayGroup.children[0]; trayGroup.remove(ch); ch.traverse(function (m) { if (m.geometry) m.geometry.dispose(); }); }
@@ -1128,6 +1303,10 @@ function fitMax() {
 		var s = p.sock, avail = (p.dipHoriz ? p.outerW : p.outerH) - 2 * p.wall - p.tol;
 		var maxChips = Math.max(1, Math.floor((avail + p.chipGap) / (s.len + p.chipGap)));
 		$('perRow').max = Math.max(12, maxChips); $('perRow').value = maxChips; p = params();
+	}
+	if (p.fam === 'mem') {   // the same for modules: fill one channel across the format first
+		var availM = (p.memHoriz ? p.outerH : p.outerW) - 2 * p.wall - p.tol;
+		$('memCount').value = Math.max(1, Math.floor(availM / p.pitch)); p = params();
 	}
 	$('rows').max = Math.max(12, Math.min(40, p.maxRows)); $('cols').max = Math.max(12, Math.min(40, p.maxCols));
 	$('rows').value = Math.min(40, p.maxRows); $('cols').value = Math.min(40, p.maxCols); rebuild(); setView(viewMode);
@@ -1180,7 +1359,7 @@ function settingsLine() {
 // The binary STL header is exactly 80 bytes, so that one gets the short form and a pointer to the others.
 function settingsShort(p) {
 	var t = 'CTG ' + BUILD + ' ' + p.sock.id + ' ' + p.rows + 'x' + p.cols
-		+ (p.fam === 'dip' ? 'x' + p.perRow : '') + ' '
+		+ (p.fam === 'dip' ? 'x' + p.perRow : p.fam === 'mem' ? 'x' + p.memCount : '') + ' '
 		+ (p.fixed ? p.outerW + 'x' + p.outerH : 'auto')
 		+ ' tol' + p.tol + ' w' + p.wall + ' fl' + p.floor + ' d' + p.depth;
 	return t.slice(0, 80);
@@ -1239,7 +1418,7 @@ function download(name, data, type) {
 	var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
 	setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
-function fileBase(p) { return (p.lid ? 'lid_' : 'tray_') + p.sock.id + '_' + p.rows + 'x' + p.cols + (p.fam === 'dip' ? 'x' + p.perRow : '') + (p.fixed ? '_' + p.outerW + 'x' + p.outerH : ''); }
+function fileBase(p) { return (p.lid ? 'lid_' : 'tray_') + p.sock.id + '_' + p.rows + 'x' + p.cols + (p.fam === 'dip' ? 'x' + p.perRow : p.fam === 'mem' ? 'x' + p.memCount : '') + (p.fixed ? '_' + p.outerW + 'x' + p.outerH : ''); }
 
 function exportScadLid(p) {
 	var L = [], top = p.labelTopFace, raised = p.labelStyle === 'raised';
@@ -1321,7 +1500,8 @@ function exportScad() {
 	L.push('wall = ' + p.wall + ';       // wall between pockets');
 	L.push('floor_t = ' + p.floor + ';   // floor thickness');
 	L.push('depth = ' + p.depth + ';     // pocket depth');
-	L.push('sup_h = ' + p.pedH + ';      // support height (pedestal / ledge / pad / rail)');
+	L.push('sup_h = ' + p.pedH + ';      // support height (pedestal / ledge / pad / rail / module feet)');
+	L.push('support_always = ' + (FAMILIES[p.fam].always ? 1 : 0) + ';   // 1 = support() also holds the grooved end walls, built even at sup_h 0');
 	L.push('hole_pos = [' + p.holeList.map(function (h) { return '[' + h.x.toFixed(2) + ', ' + h.y.toFixed(2) + ']'; }).join(', ') + '];  // push-out holes, pocket-local');
 	L.push('hole_cham = ' + p.holeCham.toFixed(2) + ';   // 45 deg funnel at the underside mouth of each hole');
 	L.push('notch_r = ' + p.notchR.toFixed(2) + ';   // half the finger-notch slot length, 0 = no notches');
@@ -1386,7 +1566,7 @@ function exportScad() {
 	L.push('      translate([margin_x + c*(pocket_w+wall) + pocket_w/2 - notch_r, margin_y + r*(pocket_h+wall) + pocket_h, body_h - notch_d])');
 	L.push('        cube([2*notch_r, wall, notch_d + rim_h + 1]);');
 	L.push('  }');
-	L.push('  if (sup_h > 0) pocket_pos() translate([0, 0, floor_t]) support();');
+	L.push('  if (sup_h > 0 || support_always) pocket_pos() translate([0, 0, floor_t]) support();');
 	L.push('}');
 	L.push('');
 	L.push('difference() {');
@@ -1551,9 +1731,10 @@ function exportStl() {
 CONTROLS.forEach(function (id) {
 	$(id).addEventListener('input', function () {
 		if (id === 'sock') applyPackageDefaults();
+		if (id === 'memSided') $('memPitch').value = $('memSided').value === '2' ? currentPkg().pitch2 : currentPkg().pitch1;
 		if (id === 'labelInput') saveLabel(currentPkg().id, $('labelInput').value);
 		rebuild();
-		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH'].indexOf(id) >= 0) setView(viewMode);
+		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH', 'memCount', 'memPitch', 'memSided', 'memHoriz', 'memH'].indexOf(id) >= 0) setView(viewMode);
 	});
 });
 $('build').textContent = 'build ' + BUILD;

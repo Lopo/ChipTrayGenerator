@@ -1,7 +1,8 @@
 # Chip Tray Generator
 
 A single-file, parametric generator for stackable, 3D-printable storage trays for retro processors and chips:
-PGA / LGA CPUs (386 to Athlon 64 / LGA 775), QFP and PLCC chips, and DIP chips in channels.
+PGA / LGA CPUs (386 to Athlon 64 / LGA 775), QFP and PLCC chips, DIP chips in channels, and memory modules
+(SIMM 30, SIPP 30, SIMM 72, DIMM 168) standing in grooves.
 
 **Use it online:** https://lopo.github.io/ChipTrayGenerator/ — or download `index.html` and open it locally.
 No build, no server; three.js is loaded from a CDN for the preview.
@@ -27,6 +28,7 @@ No build, no server; three.js is loaded from a CDN for the preview.
 | Socket 423 / 478 / 604 / 754 / 939 / AM2 / AM3 / LGA | edge ledge only | underside is covered by capacitors or lands |
 | QFP / PLCC | pad under the plastic body, leads float | same principle as JEDEC shipping trays |
 | DIP | centre rail between the pin rows, chips end to end in a channel | same principle as a shipping tube |
+| SIMM / SIPP / DIMM | upright in grooves in the end walls, on feet under the bare PCB ends or a centre hump | same principle as the original module trays; SIPP pins float |
 
 The generator warns when a support would touch pins, capacitors or lead feet.
 
@@ -45,6 +47,10 @@ Package sizes and pin-free centres are taken from manufacturer datasheets, not g
 | Socket 423, 478, 604, 754/939/940, AM2/AM3, LGA 775 | Intel / AMD published package sizes; underside treated as populated |
 | QFP / PLCC | JEDEC MS-022, MS-026, MS-018, MS-016, MO-069 |
 | DIP | JEDEC MS-001 (0.3"), MS-011 (0.6"), MO-016 class (0.9") — maximum body lengths |
+| SIMM 30 | Micron MT2D18 data sheet, 30-pin SIMM outline (88.65–89.15 mm, PCB 1.19–1.37, 2.03 × 6.35 mm pin-1 corner notch); Mitsubishi 1987 IC Memories data book p. 54, type 30N9 (88.9 ± 0.2 × 17.2, PCB 1.27 ± 0.15) |
+| SIPP 30 | Two board lengths exist: SIMM-sized (Intel SIPP measured 88.8 mm, pins 5.0 mm below the edge) and Mitsubishi type 30N5, 1987 IC Memories data book p. 54 (78.9 ± 0.2 × 18 max, pins ≥ 2.8 mm) — so the length is an input, default SIMM-sized |
+| SIMM 72 | Micron MT8D432 / MT16D832 data sheet (107.70–108.20 mm, 5.08 / 8.98 mm max single- / double-sided, first contact ≥ 5.97 mm from the end) |
+| DIMM 168 | Micron MT8/16LSDTxx64A data sheet, Fig. 11/12 (133.20–133.50 mm, PCB 1.17–1.37 mm, 3.18 / 3.99 mm max single- / double-sided, contacts 115.57 mm, key notches) |
 
 Pedestal sizes for the older PGAs were read off the pinout drawings (pin-free centre minus one pin diameter of margin).
 The mobile / late-desktop entries use conservative defaults because their substrate rim is narrow; keep the tolerance
@@ -58,6 +64,7 @@ at 0.3 mm or less there, as the tool tells you.
 - The label is real geometry in both styles. **Raised** comes out of the 3MF as a **second object with its own material**, so a dual-colour printer can put it on another extruder; a single filament prints the same part. **Engraved** is cut into the front wall and exports in the STL and 3MF as well — it is built without any CSG library, by leaving the wall open over the label patch and putting back a plate shaped "patch minus glyphs", with the counters of letters like O and A as their own small solids.
 - The underside is stepped in by `rim_w + tol/2` over the bottom `rim_h + 0.3` mm — that is the part that drops inside the rim of the tray below. Going back to full width leaves a 90° ledge, which you can either keep (**square step**, print it with support) or have chamfered away over the next few millimetres (**45° chamfer**, the default, prints without support). Both nest identically: the chamfer sits above the rim, so it never touches it.
 - **DIP separators** (on by default): low walls across the channel between chips, gap − tolerance thick, so every chip gets a slot of its length plus the tolerance. They end at half the thinnest plastic body above the rail — 1.4 mm for 300 mil, 1.7 mm for 600 mil (body thickness 2.92 / 3.56 mm minimum, from Microchip's JEDEC-equivalent PDIP tables) — so a chip cannot slide into its neighbour but can still be gripped by the widest part of its body.
+- **Memory modules** stand upright, like in the original module trays: one channel, a groove in each end wall per module (1.5 mm wide, 2 mm deep, both adjustable — homemade PCBs are not always the thickness that was ordered), and a spacing set by single- or double-sided modules and fine-tuned with a slider. A module stands on feet under its bare PCB ends, which reach past the SIMM's pin-1 corner notch but stop short of the first contact, so the contacts float; or on a hump in the middle that is wide enough to bridge the centre key notch of SIMM 72 and DIMM; or on a flat floor. A SIPP always stands on the feet, which are tall enough for its pins to hang free; its board length is an input, because SIPPs came both on SIMM-sized boards and on a shorter dedicated board (Mitsubishi). The tray depth follows from the module height, so the modules stay below the top and the trays still stack.
 - **Lid.** Tick "Lid for this tray" to get a flat cover that closes a stack. It takes its size, rim and recess from the tray settings, so it seats on the top tray exactly like the next tray would; the pocket controls are hidden while it is on. With the chamfer the lid edge leaves a groove against the tray below, which is something to lever it off with. The chamfer stays at 45° and always keeps at least 1 mm of upright edge on top; a lid too thin for the whole chamfer simply ends a little inside the tray's outline instead of tapering to a knife edge. The label can go on the front edge like the trays, or on top, where there is room for much bigger letters — and on that horizontal face a single-nozzle printer can do a second colour with a filament change at the label's first layer. By default the lid is **exported upside down**, top on the bed: the plug is then the narrow end at the top, so neither the step nor the chamfer needs support, and the visible face gets the bed's finish. The preview still shows it the way it sits on the stack. A checkbox turns this off; a raised label on top keeps the lid the right way up, since the letters would otherwise end up under it.
 - The label sits on the part of the front wall that is at full width, above the underside step, and is shrunk to fit if that band is short. By default it may run up onto the stacking rim, whose face is flush with the wall and stays visible when trays are stacked — on a shallow QFP or DIP tray that roughly doubles the letter height. It is **remembered per package** in the browser, because one outline covers several sockets and CPU families (LGA775 and LGA771, AM2 through AM3+ and FM, PGA168 from the 486 to a 5x86) so no default text could be right — but what you typed last time can come back. The tool warns when the outer wall gets thin where it meets the floor — raising the floor to the top of the chamfer removes the thinning completely.
 - Supports are 4 mm high for PGA (pin length is 3.05–3.30 mm), 1.5 mm for QFP/PLCC, 4 mm for DIP.
