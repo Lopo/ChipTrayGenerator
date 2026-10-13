@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Retro CPU Tray Generator</title>
+<title>Chip Tray Generator</title>
 <!-- three.js r128 UMD build + OrbitControls + STLExporter (same release, examples/js) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -91,7 +91,7 @@
 </head>
 <body>
 <div class="wrapper">
-	<h1>💾 Retro CPU Tray Generator</h1>
+	<h1>💾 Chip Tray Generator</h1>
 	<p class="subtitle">Stackable 3D-printable trays for PGA / LGA processors, QFP / PLCC chips, DIP chips and memory modules · WebGL preview · OpenSCAD, STL and 3MF export</p>
 	<div id="err"></div>
 
@@ -123,7 +123,7 @@
 		</div>
 		<div class="row" data-fam="mem">
 			<div class="field"><label for="memPitch">Module spacing (centre to centre) <span class="val" id="memPitchV">6.0 mm</span></label><input type="range" id="memPitch" min="2.5" max="15" step="0.1" value="6"></div>
-			<div class="field"><label for="memH">Module height <span class="val" id="memHV">14.0 mm</span></label><input type="range" id="memH" min="8" max="45" step="0.1" value="14"></div>
+			<div class="field"><label for="memH" title="Module heights vary a lot — from about 12 mm to double-height modules of 50 mm. The default is the standard module from the data sheet; measure your tallest module and set this to it, the tray depth follows.">Module height (measure your tallest) <span class="val" id="memHV">17.2 mm</span></label><input type="range" id="memH" min="8" max="55" step="0.1" value="17.2"></div>
 		</div>
 		<div class="row" data-fam="mem">
 			<div class="field"><label for="grooveW">Groove width (PCB + play) <span class="val" id="grooveWV">1.50 mm</span></label><input type="range" id="grooveW" min="1" max="2.5" step="0.05" value="1.5"></div>
@@ -340,14 +340,14 @@ var PACKAGES = [
 	{ id: 'dip48w', fam: 'dip', name: 'DIP-48 0.6" wide (8087-class, UPD7220)',     span: 15.9, len: 63.0, rowSp: 15.24, rail: 12.6, bodyMin: 3.56, src: 'JEDEC MS-011, max body 2.480"' },
 	{ id: 'dip64',  fam: 'dip', name: 'DIP-64 0.9" (68000, 8089)',                   span: 23.5, len: 82.55, rowSp: 22.86, rail: 20.2, bodyMin: 3.56, src: 'JEDEC MO-016 class, max body 3.250", E max 0.925"' },
 	{ group: 'Memory modules (standing in grooves)' },
-	{ id: 'simm30', fam: 'mem', name: 'SIMM 30-pin (3.5", 8/9-bit FPM)',  len: 89.15, hDef: 14,   pitch1: 6.0, pitch2: 10.0, foot: 1.5,
-	  src: 'Micron MT2D18 (Rev. 2/95) outline: length 88.65–89.15, PCB 1.19–1.37, 5.08 max over chips (single-sided), pin-1 corner notch 2.03 × 6.35, height 12.45–12.95 on that module. Measured here: 4.5–4.7 over chips, heights 12.4–20.6, first contact ~6 mm from each end' },
+	{ id: 'simm30', fam: 'mem', name: 'SIMM 30-pin (3.5", 8/9-bit FPM)',  len: 89.15, hDef: 17.2,   pitch1: 6.0, pitch2: 10.0, foot: 1.5,
+	  src: 'Micron MT2D18 (Rev. 2/95) outline: length 88.65–89.15, PCB 1.19–1.37, 5.08 max over chips (single-sided), pin-1 corner notch 2.03 × 6.35, height 12.45–12.95 on that module; Mitsubishi 1987 databook p.54 type 30N9: 88.9 ± 0.2 × 17.2 ± 0.2, PCB 1.27 ± 0.15. Default height = the Mitsubishi module; heights vary a lot (measured here 12.4–20.6), set the slider to your tallest. Measured: 4.5–4.7 over chips, first contact ~6 mm from each end' },
 	{ id: 'sipp30', fam: 'mem', name: 'SIPP 30-pin (pins instead of contacts; length adjustable)', len: 89.15, lenEdit: true, hDef: 16, pitch1: 6.0, pitch2: 10.0, foot: 6.0, pinLen: 5.0,
 	  src: 'Two board lengths exist: SIMM-sized (Intel SIPP measured 88.8 × 16, pins 5.0 below the edge, 5.0 over chips and pin solder) and the shorter Mitsubishi type 30N5 (MH25609JA, 1987 IC Memories databook p.54: 78.9 ± 0.2 × 18 max, pins ≥ 2.8 below the board, 5.08 over chips). Default is the SIMM size; enter the length of yours. Stands on end feet so the pins float' },
-	{ id: 'simm72', fam: 'mem', name: 'SIMM 72-pin (4.25", 32/36-bit FPM / EDO)', len: 108.2, hDef: 16.5, pitch1: 6.0, pitch2: 10.0, foot: 1.5,
-	  src: 'Micron MT8D432 / MT16D832 (1998) outline: length 107.70–108.20, PCB 1.19–1.37, 5.08 max single-sided / 8.98 max double-sided, pin-1 corner notch 2.03 × 6.35, first contact ≥ 5.97 from the end, height 25.15–25.65 on that module. Measured here: 4.6 / 7.5–8.2 over chips, heights 16–34' },
-	{ id: 'dimm168', fam: 'mem', name: 'DIMM 168-pin (5.25", SDRAM)',    len: 133.5, hDef: 29,   pitch1: 4.0, pitch2: 5.0, foot: 1.5, horiz: true,
-	  src: 'Micron MT8/16LSDTxx64A Fig. 11/12: length 133.20–133.50, height 34.80–35.05 (low profile 28.42–28.73), PCB 1.17–1.37, 3.18 max single-sided / 3.99 max double-sided, contacts span 115.57 (~8.9 mm bare at each end), key notches 2.0 wide in the middle and 24.5 from one end. Measured here: 2.3 over chips single-sided' }
+	{ id: 'simm72', fam: 'mem', name: 'SIMM 72-pin (4.25", 32/36-bit FPM / EDO)', len: 108.2, hDef: 25.65, pitch1: 6.0, pitch2: 10.0, foot: 1.5,
+	  src: 'Micron MT8D432 / MT16D832 (1998) outline: length 107.70–108.20, PCB 1.19–1.37, 5.08 max single-sided / 8.98 max double-sided, pin-1 corner notch 2.03 × 6.35, first contact ≥ 5.97 from the end, height 25.15–25.65 (the usual 1" module) = default height. Heights vary a lot (measured here 16–34, double-height modules exist), set the slider to your tallest. Measured: 4.6 / 7.5–8.2 over chips' },
+	{ id: 'dimm168', fam: 'mem', name: 'DIMM 168-pin (5.25", SDRAM)',    len: 133.5, hDef: 35.05,   pitch1: 4.0, pitch2: 5.0, foot: 1.5, horiz: true,
+	  src: 'Micron MT8/16LSDTxx64A Fig. 11/12: length 133.20–133.50, height 34.80–35.05 = default (low profile 28.42–28.73, measured here 29), PCB 1.17–1.37, 3.18 max single-sided / 3.99 max double-sided, contacts span 115.57 (~8.9 mm bare at each end), key notches 2.0 wide in the middle and 24.5 from one end. Measured here: 2.3 over chips single-sided' }
 ];
 var PLA_DENSITY = 1.24; // g/cm3
 var LABEL_COLOR = 0x14b8a6, LABEL_COLOR_HEX = '#14B8A6';  // second material: preview colour == 3MF displaycolor
@@ -374,7 +374,7 @@ var MEM_FOOT = 3.5, MEM_HUMP = 7, MEM_HEAD = 0.5;
 function sepAbove(s) { return Math.floor((s.bodyMin || 3.56) / 2 * 10) / 10; }      // upright edge kept on top of a lid's chamfer, whatever its thickness
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-10-11.1';
+var BUILD = '2026-10-13.1';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
 	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep', 'lidFlip',
@@ -1430,7 +1430,7 @@ function exportScadLid(p) {
 			var b = bb.boundingBox; size = 5 * topScale(p, b.max.x - b.min.x, b.max.y - b.min.y);
 		} catch (e) { }
 	}
-	L.push('// Lid for a retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
+	L.push('// Chip Tray Generator — lid, generated ' + new Date().toISOString().slice(0, 10));
 	L.push('// ' + settingsLine());
 	L.push('// Seats on the rim of the top tray of a stack of ' + p.sock.name + ' trays');
 	L.push('outer_w = ' + p.outerW + ';');
@@ -1485,7 +1485,7 @@ function exportScadLid(p) {
 function exportScad() {
 	var p = params(), s = p.sock, L = [];
 	if (p.lid) return exportScadLid(p);
-	L.push('// Retro CPU tray — generated ' + new Date().toISOString().slice(0, 10));
+	L.push('// Chip Tray Generator — tray, generated ' + new Date().toISOString().slice(0, 10));
 	L.push('// ' + settingsLine());
 	L.push('// ' + s.name + ' — ' + s.src);
 	L.push('// family: ' + p.fam);
