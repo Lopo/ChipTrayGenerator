@@ -119,7 +119,7 @@
 					<option value="2">Double-sided (chips on both sides)</option>
 				</select>
 			</div>
-			<div class="field"><label for="memCount">Modules per channel <span class="val" id="memCountV">12</span></label><input type="range" id="memCount" min="1" max="40" value="12"></div>
+			<div class="field"><label for="memCount">Modules per channel <span class="val" id="memCountV">12</span></label><input type="range" id="memCount" min="1" max="100" value="12"></div>
 		</div>
 		<div class="row" data-fam="mem">
 			<div class="field"><label for="memPitch">Module spacing (centre to centre) <span class="val" id="memPitchV">6.0 mm</span></label><input type="range" id="memPitch" min="2.5" max="15" step="0.1" value="6"></div>
@@ -128,6 +128,10 @@
 		<div class="row" data-fam="mem">
 			<div class="field"><label for="grooveW">Groove width (PCB + play) <span class="val" id="grooveWV">1.50 mm</span></label><input type="range" id="grooveW" min="1" max="2.5" step="0.05" value="1.5"></div>
 			<div class="field"><label for="grooveD">Groove depth into the end wall <span class="val" id="grooveDV">2.00 mm</span></label><input type="range" id="grooveD" min="1" max="4" step="0.25" value="2"></div>
+		</div>
+		<div class="row" data-fam="mem">
+			<div class="field"><label for="grooveH" title="The grooves guide only the lower part of the module; above them the end wall is smooth, so the upper part is free and the modules can be tilted apart to get hold of one. The tops of the teeth between the grooves are chamfered.">Groove height (module guided up to) <span class="val" id="grooveHV">8.0 mm</span></label><input type="range" id="grooveH" min="3" max="50" step="0.5" value="8"></div>
+			<div class="field"><label for="wallCham" title="The top inner edge of both end walls is cut away at 45° over the channel, so there is room for a fingertip at the top corners of a module. Limited by the end wall thickness: at least 3 mm of it stays at full height for the stacking rim.">End wall chamfer at the top <span class="val" id="wallChamV">5.0 mm</span></label><input type="range" id="wallCham" min="0" max="10" step="0.5" value="5"></div>
 		</div>
 		<div class="row" data-fam="mem" data-pkg="sipp30">
 			<div class="field"><label for="memLen">Module length <span class="val">mm</span></label><input type="number" id="memLen" value="89.15" step="0.05" min="50" max="140" title="SIPPs come in at least two lengths: on a SIMM-sized board (Intel, measured 88.8) or on a shorter dedicated board (Mitsubishi 30N5: 78.9). Enter yours."></div>
@@ -163,7 +167,7 @@
 			<input type="range" id="tol" min="0" max="2" step="0.05" value="0.5">
 		</div>
 		<div class="row">
-			<div class="field"><label for="wall"><span id="wallK">Wall between pockets</span> <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="8" step="0.5" value="3"></div>
+			<div class="field"><label for="wall"><span id="wallK">Wall between pockets</span> <span class="val" id="wallV">3.0 mm</span></label><input type="range" id="wall" min="1.5" max="12" step="0.5" value="3"></div>
 			<div class="field" data-lid="hide"><label for="floor">Floor <span class="val" id="floorV">2.5 mm</span></label><input type="range" id="floor" min="1" max="6" step="0.5" value="2.5"></div>
 		</div>
 		<div class="row" data-lid="hide">
@@ -374,11 +378,11 @@ var MEM_FOOT = 3.5, MEM_HUMP = 7, MEM_HEAD = 0.5;
 function sepAbove(s) { return Math.floor((s.bodyMin || 3.56) / 2 * 10) / 10; }      // upright edge kept on top of a lid's chamfer, whatever its thickness
 
 var $ = function (id) { return document.getElementById(id); };
-var BUILD = '2026-10-13.1';
+var BUILD = '2026-10-14.1';
 var CONTROLS = ['sock', 'cw', 'ch', 'perRow', 'chipGap', 'fixedOn', 'fixedW', 'fixedH', 'rows', 'cols', 'tol', 'wall',
 	'floor', 'depth', 'ped', 'pedSize', 'pedOn', 'ledge', 'inset', 'railW', 'dipHoriz', 'rim', 'hole', 'holeD',
 	'notch', 'recessStyle', 'labelInput', 'labelStyle', 'labelRim', 'lidOn', 'lidH', 'labelPos', 'dipSep', 'lidFlip',
-	'memSided', 'memCount', 'memPitch', 'memH', 'grooveW', 'grooveD', 'memSup', 'memHoriz', 'memLen'];
+	'memSided', 'memCount', 'memPitch', 'memH', 'grooveW', 'grooveD', 'memSup', 'memHoriz', 'memLen', 'grooveH', 'wallCham'];
 var sockEl = $('sock');
 (function () {
 	var grp = null;
@@ -615,15 +619,21 @@ var FAMILIES = {
 		always: true,          // the groove teeth are there even with no support underneath
 		defaults: function (s, famChanged) {
 			$('memH').value = s.hDef; $('memPitch').value = $('memSided').value === '2' ? s.pitch2 : s.pitch1;
+			$('grooveH').value = Math.round(s.hDef / 2 * 2) / 2;   // guide the lower half by default
 			$('ped').value = s.foot; $('memHoriz').checked = !!s.horiz;
 			if (s.pinLen) $('memSup').value = 'ends';
-			if (famChanged) { $('rows').value = 1; $('cols').value = 1; $('memCount').value = 12; }
+			if (famChanged) { $('rows').value = 1; $('cols').value = 1; $('memCount').value = 12; $('wall').value = 8; }   // 8 = 5 mm chamfer + 3 at full height
 		},
 		pocket: function (s, p) {
 			p.memCount = parseInt($('memCount').value); p.pitch = parseFloat($('memPitch').value);
 			p.memHoriz = $('memHoriz').checked; p.memClamped = false;
 			p.grooveW = parseFloat($('grooveW').value); p.grooveD = parseFloat($('grooveD').value);
 			p.modH = parseFloat($('memH').value);
+			// Grooves guide the lower part only. Above them the end wall is smooth and the module's upper part is
+			// free, so a packed row can be fanned apart like books on a shelf to get hold of one. The tooth tops
+			// are chamfered 45° towards the grooves, which is what lets a module lean.
+			p.grooveH = Math.min(parseFloat($('grooveH').value), p.modH);
+			p.toothCham = Math.max(0, Math.min(1.5, (p.pitch - p.grooveW) / 2 - 0.4));
 			// a SIPP has pins along the bottom edge, so it can only stand on its bare ends
 			p.memSup = s.pinLen ? 'ends' : $('memSup').value;
 			p.footH = p.memSup === 'none' ? 0 : parseFloat($('ped').value);
@@ -657,13 +667,23 @@ var FAMILIES = {
 				var r = p.memHoriz ? rect(o.x + a0, o.y + b0, a1 - a0, b1 - b0) : rect(o.x + b0, o.y + a0, b1 - b0, a1 - a0);
 				g.add(extrude(r, z0, dz, mat));
 			}
-			// Teeth between the grooves, along both end walls, from the floor to the top. They reach SINK into the
-			// end wall and into the side walls, so they fuse with the body instead of touching it.
+			// Teeth between the grooves, along both end walls, from the floor up to grooveH. They reach SINK into the
+			// end wall and into the side walls, so they fuse with the body instead of touching it. The top toothCham
+			// of each tooth narrows at 45° in CHAMFER_STEPS slices, so the groove flares out at its mouth.
+			var zTop = p.floor + p.grooveH, zCh = zTop - p.toothCham;
 			[[-SINK, p.grooveD], [f.L - p.grooveD, f.L + SINK]].forEach(function (end) {
 				var at = -SINK;
 				gs.concat([f.B + SINK + hw]).forEach(function (c, i) {
 					var to = i < gs.length ? c - hw : f.B + SINK;
-					if (to - at > 0.05) box(end[0], end[1], at, to, p.floor - SINK, p.depth + SINK, matGrey);
+					var outer0 = i === 0, outer1 = i === gs.length;     // end teeth merge into the side walls, no chamfer there
+					if (to - at > 0.05) {
+						box(end[0], end[1], at, to, p.floor - SINK, zCh - p.floor + 2 * SINK, matGrey);
+						for (var k = 0; k < CHAMFER_STEPS && p.toothCham > 0; k++) {
+							var d0 = p.toothCham * k / CHAMFER_STEPS, z0 = zCh + d0, dz = p.toothCham / CHAMFER_STEPS;
+							var a0 = outer0 ? at : at + d0, a1 = outer1 ? to : to - d0;
+							if (a1 - a0 > 0.05) box(end[0], end[1], a0, a1, z0 - SINK, dz + SINK, matGrey);
+						}
+					}
 					at = c + hw;
 				});
 			});
@@ -680,13 +700,13 @@ var FAMILIES = {
 		area: function (p) { return 0; },
 		volume: function (p) {       // per channel: teeth to the top, feet or hump at support height
 			var f = FAMILIES.mem.frame(p);
-			var v = 2 * Math.max(0, f.B - p.memCount * p.grooveW) * p.grooveD * p.depth;
+			var v = 2 * Math.max(0, f.B - p.memCount * p.grooveW) * p.grooveD * p.grooveH;
 			if (p.footH > 0) v += (p.memSup === 'hump' ? MEM_HUMP : 2 * (p.tol / 2 + p.footReach)) * f.B * p.footH;
 			return v;
 		},
 		table: function (p, s) {
 			var sup = p.memSup === 'hump' ? 'hump ' + MEM_HUMP + ' mm wide' : p.memSup === 'ends' ? 'feet ' + p.footReach.toFixed(1) + ' mm in from each module end' : 'flat floor';
-			return ['Grooves', p.memCount + ' × ' + p.grooveW.toFixed(2) + ' wide, ' + p.grooveD.toFixed(2) + ' deep, every ' + p.pitch.toFixed(1) + ' mm · ' + sup + (p.footH > 0 ? ', ' + p.footH.toFixed(1) + ' mm high' : '')];
+			return ['Grooves', p.memCount + ' × ' + p.grooveW.toFixed(2) + ' wide, ' + p.grooveD.toFixed(2) + ' deep, ' + p.grooveH.toFixed(1) + ' high, every ' + p.pitch.toFixed(1) + ' mm · ' + sup + (p.footH > 0 ? ', ' + p.footH.toFixed(1) + ' mm high' : '')];
 		},
 		warnings: function (p, s, w) {
 			if (p.memClamped) w.push('Modules per channel reduced to ' + p.memCount + ' so the channel fits the fixed format' + (p.memHoriz ? '' : ' (try "Modules along the width")') + '.');
@@ -696,6 +716,10 @@ var FAMILIES = {
 			if (p.pitch - p.grooveW < 0.8) w.push('The teeth between the grooves would be only ' + (p.pitch - p.grooveW).toFixed(2) + ' mm thick. Increase the spacing or narrow the grooves.');
 			if (p.footReach > 5) w.push('With grooves this deep the feet reach ' + p.footReach.toFixed(1) + ' mm under the module, past the first contacts of a SIMM 72 (5.97 mm in).');
 			if (p.memSup === 'none' && !s.pinLen) w.push('Modules stand on their contact edge on the floor.');
+			if (p.grooveH >= p.modH - 1e-6) w.push('Grooves run the whole module height: the modules cannot be tilted apart, so one in the middle of a full row has nothing to get hold of. Lower the groove height.');
+			if (p.grooveH < 0.25 * p.modH) w.push('Grooves guide less than a quarter of the module height, the modules will lean a lot.');
+			if (p.fits && parseFloat($('wallCham').value) > 0.25 && p.wallCham === 0) w.push('No room for the end wall chamfer: the end wall is only ' + (p.memHoriz ? p.marginX : p.marginY).toFixed(1) + ' mm and 3 mm of it must stay at full height for the stacking rim. ' + (p.fixed ? 'Fewer modules per channel, or a larger format, leave more outer margin.' : 'Raise the "' + $('wallK').textContent + '" slider: in a free format it sets the outer wall.'));
+			else if (p.fits && p.wallCham > 0 && p.wallCham < parseFloat($('wallCham').value) - 1e-9) w.push('End wall chamfer limited to ' + p.wallCham.toFixed(1) + ' mm by ' + (p.wallCham === p.wall / 2 ? 'the wall between the channels (both sides are chamfered, half each)' : p.wallCham === p.depth - p.grooveH ? 'the groove height (the chamfer stops above the teeth)' : 'the end wall thickness (3 mm stay at full height)') + '.');
 		},
 		scad: function (p, L) {
 			var f = FAMILIES.mem.frame(p);
@@ -704,6 +728,13 @@ var FAMILIES = {
 			L.push('pitch = ' + p.pitch + ';        // module spacing, centre to centre');
 			L.push('groove_w = ' + p.grooveW + ';     // groove width (PCB + play)');
 			L.push('groove_d = ' + p.grooveD + ';     // groove depth into each end wall');
+			L.push('groove_h = ' + p.grooveH + ';     // grooves guide the module up to this height; the end wall above is smooth');
+			L.push('tooth_ch = ' + p.toothCham.toFixed(2) + ';   // 45 deg chamfer on top of the teeth, towards the grooves');
+			L.push('wall_ch = ' + p.wallCham.toFixed(2) + ';    // 45 deg chamfer of the end walls\' top inner edge over the channel');
+			L.push('module end_chamfer() { if (wall_ch > 0) for (e = [0, 1]) hull() {');
+			L.push('  translate([0, 0, body_h - wall_ch]) ab(e ? ch_l : -0.01, e ? ch_l + 0.01 : 0, -0.01, ch_b + 0.01, 0.01);');
+			L.push('  translate([0, 0, body_h]) ab(e ? ch_l : -wall_ch, e ? ch_l + wall_ch : 0, -0.01, ch_b + 0.01, rim_h + 1);');
+			L.push('} }');
 			L.push('along_x = ' + (p.memHoriz ? 1 : 0) + ';        // 1 = modules lie along the tray width');
 			L.push('sup = "' + p.memSup + '";      // "ends" = feet under the bare PCB ends, "hump" = centre hump, "none"');
 			L.push('foot_reach = ' + (p.tol / 2 + p.footReach).toFixed(2) + ';  // feet: from the end wall under the module');
@@ -711,9 +742,14 @@ var FAMILIES = {
 			L.push('ch_l = ' + f.L.toFixed(2) + ';  ch_b = ' + f.B.toFixed(2) + ';   // channel along / across the modules');
 			L.push('module ab(a0, a1, b0, b1, h) { if (along_x) translate([a0, b0, 0]) cube([a1 - a0, b1 - b0, h]); else translate([b0, a0, 0]) cube([b1 - b0, a1 - a0, h]); }');
 			L.push('module support() {');
-			L.push('  difference() {          // teeth = the end walls of the channel with the grooves cut out');
-			L.push('    union() { ab(-0.01, groove_d, -0.01, ch_b + 0.01, depth); ab(ch_l - groove_d, ch_l + 0.01, -0.01, ch_b + 0.01, depth); }');
-			L.push('    for (i = [0:mod_n-1]) let(c = tol/2 + pitch/2 + i*pitch) ab(-1, ch_l + 1, c - groove_w/2, c + groove_w/2, depth + 1);');
+			L.push('  // teeth = the lower groove_h of both end walls with the grooves cut out, groove mouths flared by tooth_ch');
+			L.push('  module slot(c, z, w, h) { translate([0, 0, z]) ab(-1, ch_l + 1, c - w/2, c + w/2, h); }');
+			L.push('  difference() {');
+			L.push('    union() { ab(-0.01, groove_d, -0.01, ch_b + 0.01, groove_h); ab(ch_l - groove_d, ch_l + 0.01, -0.01, ch_b + 0.01, groove_h); }');
+			L.push('    for (i = [0:mod_n-1]) let(c = tol/2 + pitch/2 + i*pitch) {');
+			L.push('      slot(c, -1, groove_w, groove_h + 2);');
+			L.push('      if (tooth_ch > 0) hull() { slot(c, groove_h - tooth_ch, groove_w, 0.01); slot(c, groove_h, groove_w + 2*tooth_ch, 1); }');
+			L.push('    }');
 			L.push('  }');
 			L.push('  if (sup_h > 0 && sup == "ends") { ab(-0.01, foot_reach, -0.01, ch_b + 0.01, sup_h); ab(ch_l - foot_reach, ch_l + 0.01, -0.01, ch_b + 0.01, sup_h); }');
 			L.push('  if (sup_h > 0 && sup == "hump") ab(ch_l/2 - hump_w/2, ch_l/2 + hump_w/2, -0.01, ch_b + 0.01, sup_h);');
@@ -736,8 +772,10 @@ function params() {
 	p.pocketH = +(p.pkgH + p.tol).toFixed(2);
 	p.fixed = $('fixedOn').checked; p.clamped = false;
 	if (p.fixed) {
-		p.outerW = Math.max(40, parseFloat($('fixedW').value) || 170);
-		p.outerH = Math.max(40, parseFloat($('fixedH').value) || 130);
+		// typed values are not held to the fields' min/max by the browser, so clamp them here (400 mm = a large bed)
+		p.outerW = Math.min(400, Math.max(40, parseFloat($('fixedW').value) || 170));
+		p.outerH = Math.min(400, Math.max(40, parseFloat($('fixedH').value) || 130));
+		p.formatClamped = p.outerW !== (parseFloat($('fixedW').value) || 170) || p.outerH !== (parseFloat($('fixedH').value) || 130);
 		p.maxCols = Math.max(1, Math.floor((p.outerW - p.wall) / (p.pocketW + p.wall)));
 		p.maxRows = Math.max(1, Math.floor((p.outerH - p.wall) / (p.pocketH + p.wall)));
 		if (p.cols > p.maxCols) { p.cols = p.maxCols; p.clamped = true; }
@@ -751,6 +789,18 @@ function params() {
 		p.marginX = p.wall; p.marginY = p.wall; p.fits = true;
 	}
 	p.bodyH = p.floor + p.depth;
+	// Memory channels: the top inner edge of both end walls is chamfered at 45° over the channel (room for a
+	// fingertip at the module's top corners). It may eat into the end wall only down to 3 mm of full-height wall,
+	// which carries the stacking rim, and never below the teeth.
+	p.wallCham = 0;
+	if (p.fam === 'mem' && p.fits) {
+		// The teeth sit inside the channel, so only the wall itself counts: 3 mm of the outer end wall stays at full
+		// height; a wall between two channels is chamfered from both sides and keeps a ridge, so at most half of it.
+		var endWall = p.memHoriz ? p.marginX : p.marginY, inner = (p.memHoriz ? p.cols : p.rows) > 1 ? p.wall / 2 : 10;
+		p.wallChamMax = Math.max(0, Math.min(10, endWall - 3, inner, p.depth - p.grooveH));
+		p.wallCham = Math.min(parseFloat($('wallCham').value), p.wallChamMax);
+		if (p.wallCham < 0.25) p.wallCham = 0;
+	}
 	// A lid is the same outline with no pockets: it keeps the tray's size, rim and recess settings so it seats
 	// on the rim of the top tray exactly like the next tray would, but it is one solid plate with a flat top.
 	p.lid = $('lidOn').checked;
@@ -787,6 +837,8 @@ function params() {
 	// doubles the height left for it. It stays visible when stacked — the tray above is inset over the rim.
 	p.labelOnRim = $('labelRim').checked && p.hasRim;
 	p.labelTop = p.labelOnRim ? p.totalH : p.bodyH;
+	// an engraving must stay in the full-thickness part of the front wall: below a memory channel's end chamfer
+	if (p.wallCham > 0 && !p.memHoriz && p.labelStyle === 'engraved') p.labelTop = Math.min(p.labelTop, p.bodyH - p.wallCham);
 	p.labelBand = p.labelTop - p.insetTop;
 	p.labelSize = Math.min(5, Math.max(0.5, p.labelBand * 0.85));   // never bigger than the band: OpenSCAD takes it as given
 	p.labelZ = p.insetTop + p.labelBand / 2;
@@ -830,6 +882,11 @@ function insetAt(p, z) {
 	if (!(p.recessH > 0) || z >= p.recessH + p.flareH - 1e-9) return 0;
 	if (z < p.recessH - 1e-9) return p.recessW;
 	return p.recessW * (1 - (z - p.recessH) / p.flareH);
+}
+// How far a memory channel grows into its end walls at height z: the 45° chamfer of the walls' top edge.
+function endGrow(p, z) {
+	if (!(p.wallCham > 0) || z < p.bodyH - p.wallCham - 1e-9) return 0;
+	return Math.min(p.wallCham, z - (p.bodyH - p.wallCham));
 }
 function pocketOrigin(p, r, c) { return { x: p.marginX + c * (p.pocketW + p.wall), y: p.marginY + r * (p.pocketH + p.wall) }; }
 
@@ -1083,8 +1140,12 @@ function buildTray(p) {
 			at = Math.max(at, cut[1]);
 		});
 	}
-	function pocketSlice(w, z0, dz, cut) {
-		var mx = p.marginX, my = p.marginY, R = p.notchR, X1 = p.outerW - w, Y1 = p.outerH - w;
+	function pocketSlice(w, z0, dz, cut, zSec) {
+		// A memory channel grows into its end walls near the top (the walls' chamfered top edge): the borders and
+		// the walls on that axis get thinner by gx / gy in this slice, measured at its bottom like the outline
+		// (zSec: the slice's true bottom; z0 may start SINK lower so the slice overlaps the one below).
+		var ge = endGrow(p, zSec === undefined ? z0 : zSec), gx = p.fam === 'mem' && p.memHoriz ? ge : 0, gy = p.fam === 'mem' && !p.memHoriz ? ge : 0;
+		var mx = p.marginX - gx, my = p.marginY - gy, R = p.notchR, X1 = p.outerW - w, Y1 = p.outerH - w;
 		function frame(x, y, ww, hh) { if (ww > 0.01 && hh > 0.01) g.add(extrude(rect(x, y, ww, hh), z0, dz, matGrey)); }
 		frame(w, w, mx - w, Y1 - w);                       // left border
 		frame(p.outerW - mx, w, X1 - (p.outerW - mx), Y1 - w);  // right
@@ -1098,12 +1159,12 @@ function buildTray(p) {
 		for (c = 0; c + 1 < p.cols; c++) {                 // walls between columns, cut at each row's mid height
 			cuts = [];
 			if (cut && p.notchX) for (r = 0; r < p.rows; r++) { var cy = pocketOrigin(p, r, 0).y + p.pocketH / 2; cuts.push([cy - R, cy + R]); }
-			addBars(z0, dz, pocketOrigin(p, 0, c).x + p.pocketW, p.wall, my, p.outerH - my, cuts, true);
+			if (p.wall - 2 * gx > 0.01) addBars(z0, dz, pocketOrigin(p, 0, c).x + p.pocketW + gx, p.wall - 2 * gx, my, p.outerH - my, cuts, true);
 		}
 		for (r = 0; r + 1 < p.rows; r++) {                 // walls between rows, cut at each column's mid width
 			cuts = [];
 			if (cut && p.notchY) for (c = 0; c < p.cols; c++) { var cx = pocketOrigin(p, 0, c).x + p.pocketW / 2; cuts.push([cx - R, cx + R]); }
-			addBars(z0, dz, pocketOrigin(p, r, 0).y + p.pocketH, p.wall, mx, p.outerW - mx, cuts, false);
+			if (p.wall - 2 * gy > 0.01) addBars(z0, dz, pocketOrigin(p, r, 0).y + p.pocketH + gy, p.wall - 2 * gy, mx, p.outerW - mx, cuts, false);
 		}
 	}
 	// Body. Below recessH the outline is inset by recessW - that is the part that nests inside the rim below.
@@ -1112,6 +1173,7 @@ function buildTray(p) {
 	// overhangs the one below by a fraction of a millimetre.
 	var bounds = [0, p.floor];
 	if (p.notchD > 0) bounds.push(p.bodyH - p.notchD);
+	if (p.wallCham > 0) for (var ci = 0; ci < CHAMFER_STEPS; ci++) bounds.push(p.bodyH - p.wallCham + p.wallCham * ci / CHAMFER_STEPS);
 	if (eng) bounds.push(eng.z0, eng.z1);
 	if (p.holeCham > 0) for (var hi = 1; hi <= HOLE_STEPS; hi++) bounds.push(p.holeCham * hi / HOLE_STEPS);
 	if (p.recessH > 0) {
@@ -1126,7 +1188,7 @@ function buildTray(p) {
 		if (z1 - z0 < 1e-6) continue;
 		var w = insetAt(p, z0);
 		var zA = i === 0 ? z0 : z0 - SINK;          // the cross-section still comes from z0; only the start moves
-		if (z0 >= p.floor - 1e-9 && p.fits) pocketSlice(w, zA, z1 - zA, p.notchD > 0 && z0 >= p.bodyH - p.notchD - 1e-9);
+		if (z0 >= p.floor - 1e-9 && p.fits) pocketSlice(w, zA, z1 - zA, p.notchD > 0 && z0 >= p.bodyH - p.notchD - 1e-9, z0);
 		else g.add(extrude(z0 >= p.floor - 1e-9 ? withPockets(outerAt(w, z0, z1)) : floorHoles(outerAt(w, z0, z1), z0),
 			zA, z1 - zA, matGrey, z0 < p.holeCham - 1e-9 ? HOLE_SEG : 24));
 	}
@@ -1184,6 +1246,7 @@ function volumeMm3(p) {
 		+ (p.notchY ? p.cols * (p.rows - 1) : 0) * p.wall * 2 * p.notchR * p.notchD;
 	v += (p.outerW * p.outerH - p.rows * p.cols * p.pocketW * p.pocketH) * p.depth;
 	if (FAMILIES[p.fam].volume) v += p.rows * p.cols * FAMILIES[p.fam].volume(p);
+	if (p.wallCham > 0) v -= p.rows * p.cols * 2 * (p.memHoriz ? p.pocketH : p.pocketW) * p.wallCham * p.wallCham / 2;
 	else if (p.pedH > 0) v += p.rows * p.cols * FAMILIES[p.fam].area(p) * p.pedH;
 	if (p.rimH > 0) v += (p.outerW * p.outerH - (p.outerW - 2 * p.rimW) * (p.outerH - 2 * p.rimW)) * p.rimH;
 	return v;
@@ -1239,7 +1302,7 @@ function rebuild() {
 	$('tolV').textContent = '+' + p.tol.toFixed(2) + ' mm'; $('wallV').textContent = p.wall.toFixed(1) + ' mm';
 	// With a single pocket there is nothing between pockets: the slider is the outer wall, and in a fixed format
 	// only its minimum, since the format decides what is left over around the pocket.
-	$('wallK').textContent = p.rows * p.cols > 1 ? 'Wall between pockets' : p.fixed ? 'Outer wall (minimum)' : 'Outer wall';
+	$('wallK').textContent = p.rows * p.cols > 1 ? (p.fixed ? 'Wall between pockets' : 'Wall between pockets and outer wall') : p.fixed ? 'Outer wall (minimum)' : 'Outer wall';
 	$('floorV').textContent = p.floor.toFixed(1) + ' mm'; $('depthV').textContent = p.depth.toFixed(1) + ' mm';
 	$('pedV').textContent = (p.fam === 'mem' ? parseFloat($('ped').value) : p.pedH).toFixed(1) + ' mm';
 	$('pedK').textContent = p.fam === 'mem' ? (p.memSup === 'hump' ? 'Hump height' : 'Foot height') : 'Support height';
@@ -1254,6 +1317,8 @@ function rebuild() {
 		$('memCountV').textContent = p.memClamped ? p.memCount + ' (set ' + $('memCount').value + ', limited by format)' : p.memCount;
 		$('memPitchV').textContent = p.pitch.toFixed(1) + ' mm'; $('memHV').textContent = p.modH.toFixed(1) + ' mm';
 		$('grooveWV').textContent = p.grooveW.toFixed(2) + ' mm'; $('grooveDV').textContent = p.grooveD.toFixed(2) + ' mm';
+		$('grooveHV').textContent = p.grooveH.toFixed(1) + ' mm' + (p.grooveH < parseFloat($('grooveH').value) ? ' (max = module height)' : '');
+		$('wallChamV').textContent = p.wallCham.toFixed(1) + ' mm' + (p.fits && p.wallCham < parseFloat($('wallCham').value) - 1e-9 ? ' (max ' + p.wallChamMax.toFixed(1) + ' for this end wall)' : '');
 		$('memSup').disabled = !!s.pinLen;
 		$('tPkg').textContent = p.modLen + ' mm long · ' + p.modH.toFixed(1) + ' mm high';
 		$('tPocket').textContent = p.pocketW + ' × ' + p.pocketH + ' mm channel (' + p.memCount + ' modules)';
@@ -1276,6 +1341,7 @@ function rebuild() {
 	$('tSrc').textContent = s.src;
 	var warn = [];
 	if (p.lid) lidWarnings(p, warn); else {
+	if (p.fixed && p.formatClamped) warn.push('Fixed format limited to 40–400 mm per side, using ' + p.outerW + ' × ' + p.outerH + ' mm.');
 	if (p.fixed && p.clamped) warn.push('That many pockets do not fit the ' + p.outerW + ' × ' + p.outerH + ' format, reduced to ' + p.rows + ' × ' + p.cols + '.');
 	if (p.fixed && !p.fits) warn.push('Even one pocket (' + p.pocketW + ' × ' + p.pocketH + ' mm) plus walls does not fit the ' + p.outerW + ' × ' + p.outerH + ' format — nothing is cut. Enlarge the format' + (p.fam === 'dip' ? ', reduce chips per channel or rotate the channels' : '') + '.');
 	if (p.rimH > 0 && p.fits && !p.recessOK) warn.push('Outer wall (' + Math.min(p.marginX, p.marginY).toFixed(2) + ' mm) is narrower than the nesting recess (' + p.recessW.toFixed(2) + ' mm = rim width + tolerance/2): the recess would undercut the pockets. Use walls ≥ ' + p.recessW.toFixed(2) + ' mm or a fixed format.');
@@ -1306,7 +1372,8 @@ function fitMax() {
 	}
 	if (p.fam === 'mem') {   // the same for modules: fill one channel across the format first
 		var availM = (p.memHoriz ? p.outerH : p.outerW) - 2 * p.wall - p.tol;
-		$('memCount').value = Math.max(1, Math.floor(availM / p.pitch)); p = params();
+		var maxM = Math.max(1, Math.floor(availM / p.pitch));
+		$('memCount').max = Math.max(100, maxM); $('memCount').value = maxM; p = params();
 	}
 	$('rows').max = Math.max(12, Math.min(40, p.maxRows)); $('cols').max = Math.max(12, Math.min(40, p.maxCols));
 	$('rows').value = Math.min(40, p.maxRows); $('cols').value = Math.min(40, p.maxCols); rebuild(); setView(viewMode);
@@ -1378,6 +1445,7 @@ function resetValues() {
 			el.selectedIndex = pick;
 		} else el.value = el.defaultValue;
 	});
+	lastFam = null;          // so the family's own defaults (rows, cols, depth…) are applied in full, not only the per-package ones
 	applyPackageDefaults();
 	rebuild();
 	setView(viewMode);
@@ -1394,7 +1462,11 @@ function setView(mode) {
 		: new THREE.Vector3(0, -0.001, mode === 'top' ? 1 : -1);
 	dir.normalize();
 	var target = new THREE.Vector3(0, 0, p.totalH / 2);
-	camera.position.copy(dir).multiplyScalar(fitDistance(dir, target, p)).add(target);
+	var dist = fitDistance(dir, target, p);
+	camera.position.copy(dir).multiplyScalar(dist).add(target);
+	// clipping planes follow the tray: a big free-format tray (metres of DIMM channels) was cut off by a fixed far plane
+	var diag = Math.sqrt(p.outerW * p.outerW + p.outerH * p.outerH + p.totalH * p.totalH);
+	camera.near = Math.max(0.1, dist / 1000); camera.far = dist + 4 * diag + 100; camera.updateProjectionMatrix();
 	controls.target.copy(target); controls.update();
 }
 var panelEl = document.querySelector('.preview-panel');
@@ -1558,6 +1630,7 @@ function exportScad() {
 	L.push('    }');
 	L.push('    pocket_pos() translate([0, 0, floor_t]) cube([pocket_w, pocket_h, depth + rim_h + 1]);');
 	L.push('    if (len(label) > 0 && !label_raised) label_at(label_depth);');
+	if (p.fam === 'mem') L.push('    pocket_pos() end_chamfer();');
 	L.push('    // finger notches: slot the wall between horizontally adjacent pockets');
 	L.push('    if (notch_r > 0 && cols > 1) for (r = [0:rows-1], c = [0:cols-2])');
 	L.push('      translate([margin_x + c*(pocket_w+wall) + pocket_w, margin_y + r*(pocket_h+wall) + pocket_h/2 - notch_r, body_h - notch_d])');
@@ -1735,6 +1808,7 @@ CONTROLS.forEach(function (id) {
 		if (id === 'labelInput') saveLabel(currentPkg().id, $('labelInput').value);
 		rebuild();
 		if (['sock', 'rows', 'cols', 'perRow', 'chipGap', 'dipHoriz', 'fixedOn', 'fixedW', 'fixedH', 'memCount', 'memPitch', 'memSided', 'memHoriz', 'memH'].indexOf(id) >= 0) setView(viewMode);
+		if (id === 'memH' && currentPkg().fam === 'mem') { $('grooveH').value = Math.round(parseFloat($('memH').value) / 2 * 2) / 2; rebuild(); }
 	});
 });
 $('build').textContent = 'build ' + BUILD;
